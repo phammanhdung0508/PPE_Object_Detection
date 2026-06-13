@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: PPE API
+    orgId: 1
+    folder: PPE
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

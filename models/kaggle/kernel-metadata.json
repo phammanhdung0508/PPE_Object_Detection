@@ -1,0 +1,18 @@
+{
+  "id": "dungsunf/construction-safety-yolo26-fine-tune",
+  "title": "Construction Safety YOLO26 Fine Tune",
+  "code_file": "train_yolo26_ppe.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_tpu": "false",
+  "enable_internet": "true",
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [
+    "dungsunf/construction-safety-ppe"
+  ],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}
