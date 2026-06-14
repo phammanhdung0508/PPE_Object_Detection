@@ -268,6 +268,7 @@ def write_data_yaml(path: Path, class_names: list[str]) -> None:
         f"path: {PREPARED_DIR}",
         "train: images/train",
         "val: images/val",
+        "test: images/test",
         f"nc: {len(class_names)}",
         "names:",
     ]
@@ -330,34 +331,63 @@ def prepare_dataset() -> Path:
     class_to_id = {normalize_label(name): index for index, name in enumerate(class_names)}
     print(f"Using {len(class_names)} classes: {class_names}")
 
-    for split in ["train", "val"]:
+    for split in ["train", "val", "test"]:
         (PREPARED_DIR / "images" / split).mkdir(parents=True, exist_ok=True)
         (PREPARED_DIR / "labels" / split).mkdir(parents=True, exist_ok=True)
 
-    images = find_images(dataset_root)
-    random.Random(SEED).shuffle(images)
-    train_cutoff = int(len(images) * 0.85)
-
     copied = 0
     skipped = 0
-    for index, image_path in enumerate(images):
-        label_path = matching_label_path(image_path)
-        if label_path is None:
-            skipped += 1
-            continue
 
-        rows = convert_labels(image_path, label_path, class_to_id)
-        if not rows:
-            skipped += 1
-            continue
+    # Check if any of train/val/test splits exist
+    has_splits = any((dataset_root / s).exists() for s in ["train", "val", "test"])
 
-        split = "train" if index < train_cutoff else "val"
-        target_image = PREPARED_DIR / "images" / split / image_path.name
-        target_label = PREPARED_DIR / "labels" / split / f"{image_path.stem}.txt"
+    if has_splits:
+        for split in ["train", "val", "test"]:
+            split_dir = dataset_root / split
+            if split_dir.exists():
+                images = find_images(split_dir)
+                for image_path in images:
+                    label_path = matching_label_path(image_path)
+                    if label_path is None:
+                        skipped += 1
+                        continue
 
-        shutil.copy2(image_path, target_image)
-        target_label.write_text("\n".join(rows) + "\n")
-        copied += 1
+                    rows = convert_labels(image_path, label_path, class_to_id)
+                    if not rows:
+                        skipped += 1
+                        continue
+
+                    target_image = PREPARED_DIR / "images" / split / image_path.name
+                    target_label = PREPARED_DIR / "labels" / split / f"{image_path.stem}.txt"
+
+                    shutil.copy2(image_path, target_image)
+                    target_label.write_text("\n".join(rows) + "\n")
+                    copied += 1
+    else:
+        # Fallback if there is no train/val folder structure
+        # In this case we sort to be deterministic and take 85/15 ratio
+        images = find_images(dataset_root)
+        images.sort()
+        train_cutoff = int(len(images) * 0.85)
+
+        for index, image_path in enumerate(images):
+            label_path = matching_label_path(image_path)
+            if label_path is None:
+                skipped += 1
+                continue
+
+            rows = convert_labels(image_path, label_path, class_to_id)
+            if not rows:
+                skipped += 1
+                continue
+
+            split = "train" if index < train_cutoff else "val"
+            target_image = PREPARED_DIR / "images" / split / image_path.name
+            target_label = PREPARED_DIR / "labels" / split / f"{image_path.stem}.txt"
+
+            shutil.copy2(image_path, target_image)
+            target_label.write_text("\n".join(rows) + "\n")
+            copied += 1
 
     if copied == 0:
         raise RuntimeError(
@@ -398,7 +428,13 @@ def train_and_export(data_yaml: Path) -> None:
 
     best_model = Path(results.save_dir) / "weights" / "best.pt"
     trained_model = YOLO(str(best_model))
-    trained_model.val(data=str(data_yaml), imgsz=IMG_SIZE, conf=CONF_THRESHOLD)
+    print("Evaluating on validation set...")
+    trained_model.val(data=str(data_yaml), imgsz=IMG_SIZE, conf=CONF_THRESHOLD, split="val")
+    print("Evaluating on test set...")
+    try:
+        trained_model.val(data=str(data_yaml), imgsz=IMG_SIZE, conf=CONF_THRESHOLD, split="test")
+    except Exception as e:
+        print(f"Test set evaluation skipped or failed: {e}")
     exported_fp32 = trained_model.export(
         format="onnx",
         imgsz=IMG_SIZE,
