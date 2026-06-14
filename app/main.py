@@ -265,16 +265,11 @@ async def predict_batch(
 
         inference_started_at = time.perf_counter()
         batch_tensor = np.concatenate(input_tensors, axis=0)
-        used_fallback = False
-        try:
-            batch_predictions = model.predict_batch(batch_tensor)
-            if len(batch_predictions) != len(files):
-                raise RuntimeError(
-                    f"Batch output count {len(batch_predictions)} does not match input count {len(files)}"
-                )
-        except Exception:
-            used_fallback = True
-            batch_predictions = [model.predict(input_tensor) for input_tensor in input_tensors]
+        batch_predictions = model.predict_batch(batch_tensor)
+        if len(batch_predictions) != len(files):
+            raise RuntimeError(
+                f"Batch output count {len(batch_predictions)} does not match input count {len(files)}"
+            )
 
         inference_ms = round((time.perf_counter() - inference_started_at) * 1000, 2)
 
@@ -304,7 +299,7 @@ async def predict_batch(
             "total_ms": latency_ms,
         }
 
-        record_batch_success(results, image_stats, timing, used_fallback)
+        record_batch_success(results, image_stats, timing, False)
 
         logger.info(
             json.dumps(
@@ -313,7 +308,7 @@ async def predict_batch(
                     "status": "success",
                     "batch_size": len(files),
                     "threshold": confidence_threshold,
-                    "used_fallback": used_fallback,
+                    "used_fallback": False,
                     "timing": timing,
                     "results": results,
                 }
@@ -326,7 +321,7 @@ async def predict_batch(
                 "batch_size": len(files),
                 "latency_ms": latency_ms,
                 "timing": timing,
-                "used_fallback": used_fallback,
+                "used_fallback": False,
                 "results": results,
             }
         )

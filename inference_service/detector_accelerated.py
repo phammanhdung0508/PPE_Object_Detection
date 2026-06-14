@@ -59,12 +59,9 @@ class AcceleratedObjectDetector:
             image_stats.append((original_size, scale, pad))
 
         batch_tensor = np.concatenate(tensors, axis=0)
-        try:
-            batch_predictions = self.model.predict_batch(batch_tensor)
-            if len(batch_predictions) != len(image_payloads):
-                raise RuntimeError("Batch prediction count mismatch")
-        except Exception:
-            batch_predictions = [self.model.predict(tensor) for tensor in tensors]
+        batch_predictions = self.model.predict_batch(batch_tensor)
+        if len(batch_predictions) != len(image_payloads):
+            raise RuntimeError(f"Batch output count {len(batch_predictions)} does not match input count {len(image_payloads)}")
 
         results: list[list[dict[str, Any]]] = []
         for predictions, (original_size, scale, pad) in zip(batch_predictions, image_stats):
