@@ -5,6 +5,9 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 logs/
+outputs/
+sample_videos/*
+!sample_videos/.gitkeep
 data/train/
 data/valid/
 data/test/

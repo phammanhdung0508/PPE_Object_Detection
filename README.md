@@ -1,6 +1,14 @@
-# PPE Object Detection API
+# PPE Object Detection System
 
-FastAPI model-as-a-service for construction-site PPE object detection using a 5-class YOLO26 ONNX model.
+Distributed construction-site PPE object detection system using a 5-class YOLO26 ONNX model.
+
+Primary lab demo architecture:
+
+```text
+Video file -> StreamIngestion -> gRPC ObjectDetectionInference -> YOLO26 ONNX -> bounding boxes
+```
+
+The same ingestion service also supports webcam, RTSP, and smartphone IP camera URLs. The FastAPI app is kept as an optional browser/API demo.
 
 The service performs the full request lifecycle in one deployable unit:
 
@@ -11,17 +19,36 @@ Image upload -> preprocess -> ONNX Runtime inference -> NMS/postprocess -> log -
 ## Project Structure
 
 ```text
-app/                         FastAPI API service
+protos/                      gRPC protobuf contract and generated modules
+inference_service/           gRPC ObjectDetectionInference service
+stream_ingestion/            IP camera/video ingestion gRPC client
+app/                         Optional FastAPI API/demo service
 models/                      Model metadata and exported ONNX model
 models/kaggle/               Kaggle training kernel files
-scripts/                     Utility scripts
-benchmarks/                  Locust benchmark files
-deploy/                      Prometheus/Grafana config
-tests/                       Unit tests
-Dockerfile                   API container image
-docker-compose.yml           API + monitoring stack
+data/                        YOLO dataset config and Kaggle dataset metadata
+tests/                       Unit and gRPC integration tests
+Dockerfile                   Multi-target container image
+docker-compose.yml           gRPC services + optional API/monitoring stack
 requirements.txt             Runtime dependencies
 requirements-dev.txt         Test and benchmark dependencies
+```
+
+## gRPC Contract
+
+Contract file:
+
+```text
+protos/detector.proto
+```
+
+Compile generated Python modules after editing the contract:
+
+```bash
+.venv/bin/python -m grpc_tools.protoc \
+  -I . \
+  --python_out=. \
+  --grpc_python_out=. \
+  protos/detector.proto
 ```
 
 ## Train On Kaggle
@@ -83,6 +110,89 @@ For native NVIDIA GPU inference, use the GPU requirements instead of the CPU run
 ```
 
 The API automatically prefers `CUDAExecutionProvider` when `onnxruntime-gpu` and compatible NVIDIA drivers/CUDA libraries are available.
+
+## Run gRPC Inference Service
+
+Start the model-serving microservice:
+
+```bash
+.venv/bin/python -m inference_service.server --host 0.0.0.0 --port 50051
+```
+
+It loads:
+
+```text
+models/yolo26_ppe.onnx
+```
+
+## Run Video Demo Flow
+
+Place a demo video at:
+
+```text
+sample_videos/demo.mp4
+```
+
+Start the gRPC inference service:
+
+```bash
+.venv/bin/python -m inference_service.server --host 0.0.0.0 --port 50051
+```
+
+In another terminal, stream frames from the video to the inference service:
+
+```bash
+.venv/bin/python -m stream_ingestion.ingest \
+  --grpc-target localhost:50051 \
+  --source sample_videos/demo.mp4 \
+  --frame-stride 15
+```
+
+The ingestion service logs detection results for sampled frames.
+
+Display annotated video live:
+
+```bash
+.venv/bin/python -m stream_ingestion.ingest \
+  --grpc-target localhost:50051 \
+  --source sample_videos/demo.mp4 \
+  --frame-stride 15 \
+  --show
+```
+
+Save annotated video:
+
+```bash
+.venv/bin/python -m stream_ingestion.ingest \
+  --grpc-target localhost:50051 \
+  --source sample_videos/demo.mp4 \
+  --frame-stride 15 \
+  --output outputs/demo_annotated.mp4
+```
+
+The video still plays/writes every frame. Inference runs every `--frame-stride` frames and the latest detections are reused on skipped frames.
+
+## Other Stream Sources
+
+The same ingestion command also supports webcam, RTSP URL, or smartphone IP camera URL:
+
+```bash
+.venv/bin/python -m stream_ingestion.ingest \
+  --grpc-target localhost:50051 \
+  --source 0 \
+  --frame-stride 15 \
+  --reconnect
+```
+
+Examples:
+
+```bash
+.venv/bin/python -m stream_ingestion.ingest --source sample.mp4
+.venv/bin/python -m stream_ingestion.ingest --source rtsp://user:pass@camera-ip/stream
+.venv/bin/python -m stream_ingestion.ingest --source http://phone-ip:8080/video
+```
+
+The ingestion service downsizes frames, JPEG-encodes them, sends binary payloads over gRPC, and logs returned detections.
 
 ## Run API Locally
 
@@ -173,7 +283,7 @@ Create `.env` from the example:
 cp .env.example .env
 ```
 
-Start API with monitoring:
+Start the full local stack:
 
 ```bash
 docker compose up --build
@@ -182,10 +292,18 @@ docker compose up --build
 Services:
 
 ```text
-API:        http://localhost:8000
-Metrics:    http://localhost:8000/metrics
-Prometheus: http://localhost:9090
-Grafana:    http://localhost:3000
+gRPC inference:  localhost:50051
+FastAPI demo:    http://localhost:8000/docs
+Metrics:         http://localhost:8000/metrics
+Prometheus:      http://localhost:9090
+Grafana:         http://localhost:3000
+```
+
+Set video source for Docker ingestion in `.env`:
+
+```text
+STREAM_SOURCE=sample_videos/demo.mp4
+FRAME_STRIDE=15
 ```
 
 Grafana default login:
