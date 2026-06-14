@@ -339,13 +339,18 @@ def prepare_dataset() -> Path:
     skipped = 0
 
     # Check if any of train/val/test splits exist
-    has_splits = any((dataset_root / s).exists() for s in ["train", "val", "test"])
+    has_splits = any((dataset_root / s).exists() for s in ["train", "val", "valid", "test"])
+
+    train_copied = 0
+    val_copied = 0
 
     if has_splits:
-        for split in ["train", "val", "test"]:
+        for split in ["train", "val", "valid", "test"]:
             split_dir = dataset_root / split
             if split_dir.exists():
                 images = find_images(split_dir)
+                # Map 'valid' to 'val'
+                target_split = "val" if split == "valid" else split
                 for image_path in images:
                     label_path = matching_label_path(image_path)
                     if label_path is None:
@@ -357,12 +362,16 @@ def prepare_dataset() -> Path:
                         skipped += 1
                         continue
 
-                    target_image = PREPARED_DIR / "images" / split / image_path.name
-                    target_label = PREPARED_DIR / "labels" / split / f"{image_path.stem}.txt"
+                    target_image = PREPARED_DIR / "images" / target_split / image_path.name
+                    target_label = PREPARED_DIR / "labels" / target_split / f"{image_path.stem}.txt"
 
                     shutil.copy2(image_path, target_image)
                     target_label.write_text("\n".join(rows) + "\n")
                     copied += 1
+                    if target_split == "train":
+                        train_copied += 1
+                    elif target_split == "val":
+                        val_copied += 1
     else:
         # Fallback if there is no train/val folder structure
         # In this case we sort to be deterministic and take 85/15 ratio
@@ -388,15 +397,25 @@ def prepare_dataset() -> Path:
             shutil.copy2(image_path, target_image)
             target_label.write_text("\n".join(rows) + "\n")
             copied += 1
+            if split == "train":
+                train_copied += 1
+            elif split == "val":
+                val_copied += 1
 
     if copied == 0:
         raise RuntimeError(
             "No usable labels were found. Inspect label format and set PPE_CLASS_NAMES if needed."
         )
 
+    if train_copied == 0:
+        raise RuntimeError("No training images were found.")
+
+    if val_copied == 0:
+        raise RuntimeError("No validation images were found.")
+
     data_yaml = PREPARED_DIR / "data.yaml"
     write_data_yaml(data_yaml, class_names)
-    print(f"Prepared dataset: copied={copied} skipped={skipped} path={PREPARED_DIR}")
+    print(f"Prepared dataset: copied={copied} (train={train_copied}, val={val_copied}) skipped={skipped} path={PREPARED_DIR}")
     return data_yaml
 
 
@@ -434,7 +453,10 @@ def train_and_export(data_yaml: Path) -> None:
     try:
         trained_model.val(data=str(data_yaml), imgsz=IMG_SIZE, conf=CONF_THRESHOLD, split="test")
     except Exception as e:
-        print(f"Test set evaluation skipped or failed: {e}")
+        if os.getenv("ALLOW_MISSING_TEST", "false").lower() == "true":
+            print(f"Test set evaluation skipped or failed: {e}")
+        else:
+            raise RuntimeError(f"Test set evaluation failed (set ALLOW_MISSING_TEST=true to skip): {e}") from e
     exported_fp32 = trained_model.export(
         format="onnx",
         imgsz=IMG_SIZE,
