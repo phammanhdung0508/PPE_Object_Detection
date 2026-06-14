@@ -51,37 +51,6 @@ Compile generated Python modules after editing the contract:
   protos/detector.proto
 ```
 
-## Train On Kaggle
-
-Training kernel:
-
-```text
-models/kaggle/train_yolo26_ppe.py
-```
-
-Push to Kaggle:
-
-```bash
-kaggle kernels push -p models/kaggle
-```
-
-Check status:
-
-```bash
-kaggle kernels status dungsunf/construction-safety-yolo26-fine-tune
-```
-
-Download output after finish:
-
-```bash
-python scripts/fetch_kaggle_model.py \
-  --kernel dungsunf/construction-safety-yolo26-fine-tune \
-  --release v2 \
-  --include-fp16
-```
-
-Kaggle GPU note: the P100 runtime may fail with newer PyTorch builds because P100 uses CUDA architecture `sm_60`. If that happens, switch the Kaggle accelerator to T4 or another newer GPU.
-
 ## Local Environment
 
 The local project environment is created at:
@@ -137,7 +106,7 @@ Terminal 2: stream frames from the video to the inference service and log detect
 .venv/bin/python -m stream_ingestion.ingest \
   --grpc-target localhost:50051 \
   --source sample_videos/demo.mp4 \
-  --frame-stride 10
+  --frame-stride 10 --show
 ```
 
 Expected log format:

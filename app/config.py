@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 
-MODEL_PATH = os.getenv("MODEL_PATH", "models/yolo26_ppe.onnx")
+MODEL_PATH = os.getenv("MODEL_PATH", "models/yolo26_ppe_fp16.onnx")
 MODEL_METADATA_PATH = os.getenv("MODEL_METADATA_PATH", "models/model_metadata.json")
 INPUT_SIZE = int(os.getenv("INPUT_SIZE", "640"))
 IOU_THRESHOLD = float(os.getenv("IOU_THRESHOLD", "0.45"))

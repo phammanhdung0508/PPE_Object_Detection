@@ -3,12 +3,17 @@ import time
 from pathlib import Path
 from typing import Any
 
+from app.onnxruntime_dlls import add_nvidia_dll_directories
+
+add_nvidia_dll_directories()
 import numpy as np
 import onnxruntime as ort
 
 from app.model import YoloOnnxModel
 from app.postprocessing import postprocess
 from app.preprocessing import preprocess_image
+
+ort.preload_dlls(directory="")
 
 
 class AcceleratedObjectDetector:
