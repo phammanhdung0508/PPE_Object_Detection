@@ -70,9 +70,10 @@ def postprocess(
         scores.append(confidence)
         class_ids.append(class_id)
 
-    selected_indices = cv2.dnn.NMSBoxes(
+    selected_indices = cv2.dnn.NMSBoxesBatched(
         bboxes=boxes,
         scores=scores,
+        class_ids=class_ids,
         score_threshold=confidence_threshold,
         nms_threshold=IOU_THRESHOLD,
     )
