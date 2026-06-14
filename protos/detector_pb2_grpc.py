@@ -39,12 +39,23 @@ class DetectorServiceStub(object):
                 request_serializer=protos_dot_detector__pb2.DetectRequest.SerializeToString,
                 response_deserializer=protos_dot_detector__pb2.DetectResponse.FromString,
                 _registered_method=True)
+        self.BatchDetect = channel.unary_unary(
+                '/protos.DetectorService/BatchDetect',
+                request_serializer=protos_dot_detector__pb2.BatchDetectRequest.SerializeToString,
+                response_deserializer=protos_dot_detector__pb2.BatchDetectResponse.FromString,
+                _registered_method=True)
 
 
 class DetectorServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def Detect(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def BatchDetect(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -57,6 +68,11 @@ def add_DetectorServiceServicer_to_server(servicer, server):
                     servicer.Detect,
                     request_deserializer=protos_dot_detector__pb2.DetectRequest.FromString,
                     response_serializer=protos_dot_detector__pb2.DetectResponse.SerializeToString,
+            ),
+            'BatchDetect': grpc.unary_unary_rpc_method_handler(
+                    servicer.BatchDetect,
+                    request_deserializer=protos_dot_detector__pb2.BatchDetectRequest.FromString,
+                    response_serializer=protos_dot_detector__pb2.BatchDetectResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -86,6 +102,33 @@ class DetectorService(object):
             '/protos.DetectorService/Detect',
             protos_dot_detector__pb2.DetectRequest.SerializeToString,
             protos_dot_detector__pb2.DetectResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def BatchDetect(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/protos.DetectorService/BatchDetect',
+            protos_dot_detector__pb2.BatchDetectRequest.SerializeToString,
+            protos_dot_detector__pb2.BatchDetectResponse.FromString,
             options,
             channel_credentials,
             insecure,

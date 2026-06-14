@@ -223,6 +223,89 @@ Examples:
 
 The ingestion service downsizes frames, JPEG-encodes them, sends binary payloads over gRPC, and logs returned detections.
 
+## Lab 2 Accelerated Batch Inference
+
+The accelerated gRPC server supports both single-frame `Detect` and batched `BatchDetect` requests. It automatically selects the best available ONNX artifact:
+
+```text
+CUDA available + models/yolo26_ppe_fp16.onnx exists -> FP16 ONNX
+otherwise -> FP32 ONNX
+```
+
+Run accelerated batched inference service:
+
+```bash
+.venv/bin/python -m inference_service.server_accelerated \
+  --host 0.0.0.0 \
+  --port 50051 \
+  --max-batch-size 8
+```
+
+Simulate multiple video streams with client-side batching:
+
+```bash
+.venv/bin/python -m stream_ingestion.ingest_batched \
+  --grpc-target localhost:50051 \
+  --source sample_videos/demo.mp4 \
+  --camera-count 4 \
+  --batch-size 4 \
+  --frame-stride 10 \
+  --max-batches 10
+```
+
+Use explicit sources instead of repeated simulation:
+
+```bash
+.venv/bin/python -m stream_ingestion.ingest_batched \
+  --grpc-target localhost:50051 \
+  --sources sample_videos/cam1.mp4 sample_videos/cam2.mp4 sample_videos/cam3.mp4 sample_videos/cam4.mp4 \
+  --batch-size 4
+```
+
+Export accelerated model artifacts from PyTorch weights:
+
+```bash
+.venv/bin/python export_accelerated.py \
+  --weights models/kaggle/construction_output/runs/construction_safety_yolo26_finetune/weights/best.pt \
+  --formats onnx-fp32 onnx-fp16 \
+  --output-dir models/accelerated
+```
+
+Optional formats, if hardware/runtime is installed:
+
+```bash
+.venv/bin/python export_accelerated.py --formats engine
+.venv/bin/python export_accelerated.py --formats openvino
+```
+
+Docker CPU accelerated target:
+
+```bash
+docker build -f Dockerfile.cpu -t ppe-inference-cpu .
+docker run --rm -p 50051:50051 ppe-inference-cpu
+```
+
+Docker batched pipeline:
+
+```bash
+docker compose --profile batched up --build inference-service stream-ingestion-batched
+```
+
+Current benchmark snapshot on local CPU using ONNX Runtime CPU provider:
+
+```text
+batch size | precision | provider             | observed behavior
+1          | FP32      | CPUExecutionProvider | ~500-700 ms per frame on local CPU
+4          | FP32      | CPUExecutionProvider | supported via BatchDetect; throughput depends on CPU
+FP16       | FP16      | CUDAExecutionProvider | intended for GPU; slower on CPU
+```
+
+Run benchmark-related tests:
+
+```bash
+.venv/bin/pytest tests/test_benchmark.py
+```
+
 ## Run API Locally
 
 Place the trained model at:

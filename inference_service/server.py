@@ -58,6 +58,60 @@ class DetectorServicer(detector_pb2_grpc.DetectorServiceServicer):
             latency_ms=latency_ms,
         )
 
+    def BatchDetect(self, request, context):
+        if not request.frames:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "frames are required")
+
+        confidence_threshold = request.confidence_threshold or 0.25
+        if not 0.0 <= confidence_threshold <= 1.0:
+            context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                "confidence_threshold must be between 0 and 1",
+            )
+
+        results = []
+        total_latency_ms = 0.0
+        for frame in request.frames:
+            if not frame.image_bytes:
+                context.abort(grpc.StatusCode.INVALID_ARGUMENT, "all frames require image_bytes")
+            try:
+                detections, latency_ms = self.detector.detect(
+                    frame.image_bytes,
+                    confidence_threshold,
+                )
+            except ValueError as exc:
+                context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
+            except Exception as exc:
+                logging.exception("Inference failed")
+                context.abort(grpc.StatusCode.INTERNAL, f"inference failed: {exc}")
+
+            total_latency_ms += latency_ms
+            results.append(
+                detector_pb2.FrameDetections(
+                    frame_id=frame.frame_id,
+                    camera_id=frame.camera_id,
+                    detections=[
+                        detector_pb2.Detection(
+                            class_name=detection["class"],
+                            confidence=float(detection["confidence"]),
+                            x=float(detection["coordinates"][0]),
+                            y=float(detection["coordinates"][1]),
+                            width=float(detection["coordinates"][2]),
+                            height=float(detection["coordinates"][3]),
+                        )
+                        for detection in detections
+                    ],
+                )
+            )
+
+        return detector_pb2.BatchDetectResponse(
+            results=results,
+            latency_ms=round(total_latency_ms, 2),
+            batch_size=len(request.frames),
+            model_precision="FP32",
+            execution_provider="sequential",
+        )
+
 
 def create_server(detector: DetectorProtocol, max_workers: int = 4) -> grpc.Server:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))

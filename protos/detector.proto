@@ -4,11 +4,14 @@ package protos;
 
 service DetectorService {
   rpc Detect(DetectRequest) returns (DetectResponse);
+  rpc BatchDetect(BatchDetectRequest) returns (BatchDetectResponse);
 }
 
 message DetectRequest {
   bytes image_bytes = 1;
   float confidence_threshold = 2;
+  string frame_id = 3;
+  string camera_id = 4;
 }
 
 message Detection {
@@ -23,4 +26,29 @@ message Detection {
 message DetectResponse {
   repeated Detection detections = 1;
   double latency_ms = 2;
+}
+
+message FrameRequest {
+  bytes image_bytes = 1;
+  string frame_id = 2;
+  string camera_id = 3;
+}
+
+message BatchDetectRequest {
+  repeated FrameRequest frames = 1;
+  float confidence_threshold = 2;
+}
+
+message FrameDetections {
+  string frame_id = 1;
+  string camera_id = 2;
+  repeated Detection detections = 3;
+}
+
+message BatchDetectResponse {
+  repeated FrameDetections results = 1;
+  double latency_ms = 2;
+  int32 batch_size = 3;
+  string model_precision = 4;
+  string execution_provider = 5;
 }

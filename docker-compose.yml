@@ -2,7 +2,7 @@ services:
   inference-service:
     build:
       context: .
-      target: inference
+      target: accelerated
     container_name: ppe-inference-service
     env_file:
       - .env
@@ -42,6 +42,34 @@ services:
         condition: service_healthy
     networks:
       - backend
+    restart: unless-stopped
+
+  stream-ingestion-batched:
+    build:
+      context: .
+      target: ingestion
+    container_name: ppe-stream-ingestion-batched
+    command:
+      - "python"
+      - "-m"
+      - "stream_ingestion.ingest_batched"
+      - "--grpc-target"
+      - "inference-service:50051"
+      - "--source"
+      - "${STREAM_SOURCE:-sample_videos/demo.mp4}"
+      - "--camera-count"
+      - "${CAMERA_COUNT:-4}"
+      - "--batch-size"
+      - "${BATCH_SIZE:-4}"
+      - "--frame-stride"
+      - "${FRAME_STRIDE:-15}"
+    depends_on:
+      inference-service:
+        condition: service_healthy
+    networks:
+      - backend
+    profiles:
+      - batched
     restart: unless-stopped
 
   ppe-api:

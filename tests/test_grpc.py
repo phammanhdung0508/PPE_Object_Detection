@@ -81,3 +81,28 @@ def test_grpc_detect_rejects_invalid_threshold(grpc_stub) -> None:
         )
 
     assert exc_info.value.code() == grpc.StatusCode.INVALID_ARGUMENT
+
+
+def test_grpc_batch_detect_valid_jpegs_returns_results(grpc_stub) -> None:
+    response = grpc_stub.BatchDetect(
+        detector_pb2.BatchDetectRequest(
+            frames=[
+                detector_pb2.FrameRequest(
+                    image_bytes=encode_image(),
+                    frame_id="frame-1",
+                    camera_id="camera-1",
+                ),
+                detector_pb2.FrameRequest(
+                    image_bytes=encode_image(),
+                    frame_id="frame-2",
+                    camera_id="camera-2",
+                ),
+            ],
+            confidence_threshold=0.25,
+        )
+    )
+
+    assert response.batch_size == 2
+    assert len(response.results) == 2
+    assert response.results[0].frame_id == "frame-1"
+    assert response.results[0].camera_id == "camera-1"
