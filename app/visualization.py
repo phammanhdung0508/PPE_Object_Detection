@@ -4,6 +4,17 @@ import cv2
 import numpy as np
 
 
+def color_for(label: str) -> tuple[int, int, int]:
+    palette = {
+        "helmet": (0, 220, 0),
+        "no_helmet": (0, 0, 255),
+        "no_vest": (0, 0, 255),
+        "person": (0, 200, 255),
+        "vest": (255, 160, 0),
+    }
+    return palette.get(label.lower(), (220, 220, 220))
+
+
 def draw_detections(image_bytes: bytes, detections: list[dict[str, Any]]) -> bytes:
     image_array = np.frombuffer(image_bytes, dtype=np.uint8)
     image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
@@ -16,9 +27,11 @@ def draw_detections(image_bytes: bytes, detections: list[dict[str, Any]]) -> byt
         y1 = int(round(y))
         x2 = int(round(x + width))
         y2 = int(round(y + height))
-        label = f"{detection['class']} {detection['confidence']:.2f}"
+        label_text = detection["class"]
+        label = f"{label_text} {detection['confidence']:.2f}"
+        color = color_for(label_text)
 
-        cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        cv2.rectangle(image, (x1, y1), (x2, y2), color, 2)
         text_size, baseline = cv2.getTextSize(
             label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
         )
@@ -29,7 +42,7 @@ def draw_detections(image_bytes: bytes, detections: list[dict[str, Any]]) -> byt
             image,
             (x1, label_y1),
             (x1 + text_width + 6, label_y2),
-            (0, 255, 0),
+            color,
             -1,
         )
         cv2.putText(

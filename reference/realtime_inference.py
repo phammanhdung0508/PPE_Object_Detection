@@ -62,6 +62,11 @@ def parse_args() -> argparse.Namespace:
         default=2,
         help="Bounding box line width.",
     )
+    parser.add_argument(
+        "--mirror",
+        action="store_true",
+        help="Mirror (flip horizontally) the video stream.",
+    )
     return parser.parse_args()
 
 
@@ -293,9 +298,10 @@ def main() -> None:
     try:
         while True:
             ok, frame = cap.read()
-            frame = cv2.flip(frame, 1)
             if not ok:
                 break
+            if args.mirror:
+                frame = cv2.flip(frame, 1)
 
             results = model.predict(
                 source=frame,

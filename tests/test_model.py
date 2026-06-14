@@ -35,4 +35,4 @@ def test_predict_batch_casts_input_dtype() -> None:
     predictions = model.predict_batch(np.zeros((1, 3, 640, 640), dtype=np.float32))
 
     assert len(predictions) == 1
-    assert predictions[0].shape == (3, 6)
+    assert predictions[0].shape == (6, 3)

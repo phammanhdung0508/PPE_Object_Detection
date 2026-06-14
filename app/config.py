@@ -9,8 +9,8 @@ INPUT_SIZE = int(os.getenv("INPUT_SIZE", "640"))
 IOU_THRESHOLD = float(os.getenv("IOU_THRESHOLD", "0.45"))
 MIN_IMAGE_SIZE = int(os.getenv("MIN_IMAGE_SIZE", "32"))
 MAX_UPLOAD_BYTES = int(os.getenv("MAX_UPLOAD_BYTES", str(8 * 1024 * 1024)))
-ORT_INTRA_OP_THREADS = int(os.getenv("ORT_INTRA_OP_THREADS", "1"))
-ORT_INTER_OP_THREADS = int(os.getenv("ORT_INTER_OP_THREADS", "1"))
+ORT_INTRA_OP_THREADS = int(os.getenv("ORT_INTRA_OP_THREADS", "0"))
+ORT_INTER_OP_THREADS = int(os.getenv("ORT_INTER_OP_THREADS", "0"))
 ENABLE_MODEL_WARMUP = os.getenv("ENABLE_MODEL_WARMUP", "true").lower() == "true"
 MAX_BATCH_SIZE = int(os.getenv("MAX_BATCH_SIZE", "8"))
 

@@ -87,7 +87,8 @@ class YoloOnnxModel:
     def _normalize_prediction(predictions: np.ndarray) -> np.ndarray:
         if predictions.ndim != 2:
             raise RuntimeError(f"Unsupported prediction shape: {predictions.shape}")
-        if predictions.shape[0] < predictions.shape[1] and predictions.shape[0] in {6, 7, 84, 85}:
+        num_channels = predictions.shape[0]
+        if predictions.shape[0] < predictions.shape[1] and num_channels < 100:
             predictions = predictions.T
         return predictions
 
