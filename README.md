@@ -111,9 +111,15 @@ For native NVIDIA GPU inference, use the GPU requirements instead of the CPU run
 
 The API automatically prefers `CUDAExecutionProvider` when `onnxruntime-gpu` and compatible NVIDIA drivers/CUDA libraries are available.
 
-## Run gRPC Inference Service
+## Quick Start Video Demo
 
-Start the model-serving microservice:
+Place a demo video at:
+
+```text
+sample_videos/demo.mp4
+```
+
+Terminal 1: start the gRPC model-serving microservice:
 
 ```bash
 .venv/bin/python -m inference_service.server --host 0.0.0.0 --port 50051
@@ -125,30 +131,22 @@ It loads:
 models/yolo26_ppe.onnx
 ```
 
-## Run Video Demo Flow
-
-Place a demo video at:
-
-```text
-sample_videos/demo.mp4
-```
-
-Start the gRPC inference service:
-
-```bash
-.venv/bin/python -m inference_service.server --host 0.0.0.0 --port 50051
-```
-
-In another terminal, stream frames from the video to the inference service:
+Terminal 2: stream frames from the video to the inference service and log detections:
 
 ```bash
 .venv/bin/python -m stream_ingestion.ingest \
   --grpc-target localhost:50051 \
   --source sample_videos/demo.mp4 \
-  --frame-stride 15
+  --frame-stride 10
 ```
 
-The ingestion service logs detection results for sampled frames.
+Expected log format:
+
+```text
+frame=10 detections=['person:0.95', 'helmet:0.91', 'vest:0.63'] inference_ms=663.17 total_ms=671.59
+```
+
+If no PPE is detected on a frame, `detections=[]` is still a valid response.
 
 Display annotated video live:
 
@@ -156,9 +154,11 @@ Display annotated video live:
 .venv/bin/python -m stream_ingestion.ingest \
   --grpc-target localhost:50051 \
   --source sample_videos/demo.mp4 \
-  --frame-stride 15 \
+  --frame-stride 10 \
   --show
 ```
+
+Press `q` or `Esc` to close the live display window.
 
 Save annotated video:
 
@@ -166,11 +166,39 @@ Save annotated video:
 .venv/bin/python -m stream_ingestion.ingest \
   --grpc-target localhost:50051 \
   --source sample_videos/demo.mp4 \
-  --frame-stride 15 \
+  --frame-stride 10 \
   --output outputs/demo_annotated.mp4
 ```
 
-The video still plays/writes every frame. Inference runs every `--frame-stride` frames and the latest detections are reused on skipped frames.
+The video still displays/writes every frame. Inference runs every `--frame-stride` frames and the latest detections are reused on skipped frames.
+
+Lower `--frame-stride` for more frequent detection updates:
+
+```text
+--frame-stride 5
+```
+
+Increase `--frame-stride` if CPU inference is too slow:
+
+```text
+--frame-stride 15
+--frame-stride 30
+```
+
+Validate the demo video path if ingestion cannot open it:
+
+```bash
+.venv/bin/python - <<'PY'
+import cv2
+cap = cv2.VideoCapture('sample_videos/demo.mp4')
+print('opened:', cap.isOpened())
+print('frames:', cap.get(cv2.CAP_PROP_FRAME_COUNT))
+print('fps:', cap.get(cv2.CAP_PROP_FPS))
+print('width:', cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+print('height:', cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+cap.release()
+PY
+```
 
 ## Other Stream Sources
 
@@ -187,9 +215,10 @@ The same ingestion command also supports webcam, RTSP URL, or smartphone IP came
 Examples:
 
 ```bash
-.venv/bin/python -m stream_ingestion.ingest --source sample.mp4
-.venv/bin/python -m stream_ingestion.ingest --source rtsp://user:pass@camera-ip/stream
-.venv/bin/python -m stream_ingestion.ingest --source http://phone-ip:8080/video
+.venv/bin/python -m stream_ingestion.ingest --grpc-target localhost:50051 --source sample_videos/demo.mp4
+.venv/bin/python -m stream_ingestion.ingest --grpc-target localhost:50051 --source 0 --show
+.venv/bin/python -m stream_ingestion.ingest --grpc-target localhost:50051 --source rtsp://user:pass@camera-ip/stream --reconnect
+.venv/bin/python -m stream_ingestion.ingest --grpc-target localhost:50051 --source http://phone-ip:8080/video --reconnect
 ```
 
 The ingestion service downsizes frames, JPEG-encodes them, sends binary payloads over gRPC, and logs returned detections.
@@ -281,6 +310,18 @@ Create `.env` from the example:
 
 ```bash
 cp .env.example .env
+```
+
+Make sure the demo video exists before starting the ingestion container:
+
+```text
+sample_videos/demo.mp4
+```
+
+Run only the gRPC video pipeline:
+
+```bash
+docker compose up --build inference-service stream-ingestion
 ```
 
 Start the full local stack:
