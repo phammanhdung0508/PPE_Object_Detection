@@ -10,7 +10,8 @@ from app.onnxruntime_dlls import add_nvidia_dll_directories
 add_nvidia_dll_directories()
 import onnxruntime as ort
 
-ort.preload_dlls(directory="")
+if hasattr(ort, "preload_dlls"):
+    ort.preload_dlls(directory="")
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate an ONNX model for ONNX Runtime.")

@@ -13,7 +13,8 @@ from app.model import YoloOnnxModel
 from app.postprocessing import postprocess
 from app.preprocessing import preprocess_image
 
-ort.preload_dlls(directory="")
+if hasattr(ort, "preload_dlls"):
+    ort.preload_dlls(directory="")
 
 
 class AcceleratedObjectDetector:

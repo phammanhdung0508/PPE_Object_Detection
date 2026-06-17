@@ -260,14 +260,31 @@ Docker batched pipeline:
 docker compose --profile batched up --build inference-service stream-ingestion-batched
 ```
 
-Current benchmark snapshot on local CPU using ONNX Runtime CPU provider:
+Measured benchmark on the current local CPU environment using ONNX Runtime CPU provider:
 
-```text
-batch size | precision | provider             | observed behavior
-1          | FP32      | CPUExecutionProvider | ~500-700 ms per frame on local CPU
-4          | FP32      | CPUExecutionProvider | supported via BatchDetect; throughput depends on CPU
-FP16       | FP16      | CUDAExecutionProvider | intended for GPU; slower on CPU
+| batch_size | precision | provider | avg_latency_ms | p95_latency_ms | throughput_fps |
+|---:|---|---|---:|---:|---:|
+| 1 | FP32 | CPUExecutionProvider | 529.73 | 526.11 | 1.89 |
+| 2 | FP32 | CPUExecutionProvider | 1102.63 | 1085.57 | 1.81 |
+| 4 | FP32 | CPUExecutionProvider | 2133.17 | 2015.53 | 1.88 |
+
+Benchmark command used:
+
+```bash
+.venv/bin/python -m inference_service.server_accelerated \
+  --host 127.0.0.1 \
+  --port 50051 \
+  --max-batch-size 8
+
+.venv/bin/python benchmarks/benchmark_batch.py \
+  --grpc-target 127.0.0.1:50051 \
+  --batch-sizes 1 2 4 \
+  --iterations 3 \
+  --warmup 1 \
+  --timeout 120
 ```
+
+GPU benchmark is expected to use `CUDAExecutionProvider` with FP16 once `onnxruntime-gpu` is installed on NVIDIA hardware.
 
 Run benchmark-related tests:
 
