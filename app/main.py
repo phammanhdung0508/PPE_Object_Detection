@@ -1,11 +1,12 @@
 import json
+import pathlib
 import time
 from contextlib import asynccontextmanager
 from typing import Any
 
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from app.config import ENABLE_MODEL_WARMUP, MAX_BATCH_SIZE, load_model_metadata
 from app.logging_config import get_logger
@@ -42,6 +43,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+@app.get("/")
+def root():
+    return RedirectResponse(url="/demo")
 
 @app.get("/health")
 def health() -> dict[str, Any]:
@@ -144,7 +148,7 @@ async def predict(
         }))
         return JSONResponse(
             status_code=500,
-            content={"status": "error", "message": "Model could not make a prediction"},
+            content={"status": "error", "message": "Prediction failed"},
         )
 
 
@@ -224,7 +228,7 @@ async def predict_annotated(
         }))
         return JSONResponse(
             status_code=500,
-            content={"status": "error", "message": "Model could not make a prediction"},
+            content={"status": "error", "message": "Prediction failed"},
         )
 @app.post("/predict-batch")
 async def predict_batch(
@@ -360,5 +364,14 @@ async def predict_batch(
         )
         return JSONResponse(
             status_code=500,
-            content={"status": "error", "message": "Model could not make a prediction"},
+            content={"status": "error", "message": "Prediction failed"},
         )
+
+
+@app.get("/demo", response_class=HTMLResponse)
+def demo_ui() -> HTMLResponse:
+    demo_path = pathlib.Path(__file__).parent / "static" / "demo.html"
+    if not demo_path.exists():
+        raise HTTPException(status_code=404, detail="Demo UI not found")
+    return HTMLResponse(content=demo_path.read_text())
+

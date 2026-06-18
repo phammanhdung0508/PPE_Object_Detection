@@ -356,6 +356,35 @@ Startup warmup is enabled by default with:
 ENABLE_MODEL_WARMUP=true
 ```
 
+## Web Demo
+
+A browser-based multi-video demo is included within the FastAPI app. It sends frames directly to the native gRPC inference service through the Envoy gRPC-Web proxy.
+
+Start the gRPC inference service and Envoy proxy:
+
+```bash
+docker compose up --build inference-service envoy
+```
+
+In another terminal, start the FastAPI server that serves the dashboard:
+
+```bash
+.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Open the demo in your browser:
+
+[http://localhost:8000/demo](http://localhost:8000/demo)
+
+Instructions:
+1. Click **Choose Files** and upload 1 to 4 local video files (e.g. from `sample_videos/`).
+2. Adjust the confidence threshold if desired.
+3. Click **Start Processing** to begin playing the videos and streaming frames to Envoy on `localhost:8080`.
+
+The demo will display a 2x2 grid with bounding boxes drawn over the frames in real time.
+
+> **Note**: CPU inference for multiple videos is slower. Running this demo on a machine with a GPU using FP16 model artifacts (`yolo26_ppe_fp16.onnx`) is preferred for a smoother multi-video experience.
+
 ## Colab Demo
 
 The Colab demo setup is in:
@@ -466,3 +495,53 @@ Run after the API is available and `benchmarks/sample.jpg` exists:
 ```bash
 .venv/bin/pytest tests
 ```
+
+## gRPC-Web Multi-Video Dashboard
+
+We provide an interactive, real-time command center dashboard using `gRPC-Web` that communicates directly with the gRPC inference service on port `50051` via an Envoy proxy.
+
+### How to Run
+
+1. **Start the Inference Service and Envoy Proxy** (runs gRPC server on `50051` and Envoy proxy on `8080`):
+   ```bash
+   docker compose up --build inference-service envoy
+   ```
+
+2. **Start the FastAPI Web App** (to serve the dashboard interface):
+   ```bash
+   .venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+   ```
+
+3. **Open the Dashboard**:
+   Go to [http://localhost:8000/demo](http://localhost:8000/demo) in your web browser.
+
+4. **Operate**:
+   - Upload 1 to 4 video files (e.g. `sample_videos/demo.mp4`).
+   - Start the analysis engine.
+   - Bounding boxes, latency statistics, precision format, and device execution provider details are fetched directly from the gRPC service via port `8080` and drawn live on the screen.
+
+### Running with GPU Acceleration
+
+To run inference on your NVIDIA GPU instead of the CPU inside Docker, you must:
+
+1. **Install the NVIDIA Container Toolkit** on your host Linux machine:
+   ```bash
+   # Configure the production repository
+   curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+     && curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+       sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+       sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+   # Install the package
+   sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+
+   # Configure and restart Docker
+   sudo nvidia-ctk runtime configure --runtime=docker
+   sudo systemctl restart docker
+   ```
+
+2. **Run Docker Compose** (the GPU hardware reservation blocks are already added to `docker-compose.yml`):
+   ```bash
+   docker compose up --build
+   ```
+
