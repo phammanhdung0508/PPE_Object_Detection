@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PPE SOC gRPC-Web Surveillance Dashboard</title>
+    <style>
+        :root {
+            /* Design Tokens */
+            --bg-base: #0a0a0c;
+            --bg-surface: #14151a;
+            --bg-surface-hover: #1e2028;
+            --bg-surface-elevated: #242730;
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --border-color: #272a35;
+            
+            --color-brand: #3b82f6;
+            --color-compliant: #10b981;
+            --color-violation: #ef4444;
+            --color-info: #6366f1;
+            --color-warning: #f59e0b;
+
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: grid;
+            grid-template-areas:
+                "topbar topbar topbar"
+                "sidebar-left main sidebar-right"
+                "statusbar statusbar statusbar";
+            grid-template-rows: 64px 1fr 40px;
+            grid-template-columns: 280px 1fr 320px;
+        }
+
+        /* Typography */
+        h2, h3 { font-weight: 600; }
+        .text-xs { font-size: 0.75rem; }
+        .text-sm { font-size: 0.875rem; }
+        .text-lg { font-size: 1.125rem; }
+        .text-secondary { color: var(--text-secondary); }
+
+        /* Layout Panels */
+        header.topbar {
+            grid-area: topbar;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 10;
+        }
+
+        aside.sidebar-left {
+            grid-area: sidebar-left;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        main.video-grid-container {
+            grid-area: main;
+            background-color: var(--bg-base);
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        aside.sidebar-right {
+            grid-area: sidebar-right;
+            background-color: var(--bg-surface);
+            border-left: 1px solid var(--border-color);
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        footer.statusbar {
+            grid-area: statusbar;
+            background-color: var(--bg-surface-elevated);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 0 24px;
+            gap: 32px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* Buttons & Inputs */
+        button, .btn {
+            background-color: var(--bg-surface-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--bg-surface-hover);
+            border-color: var(--text-secondary);
+        }
+
+        button.primary {
+            background-color: var(--color-brand);
+            border-color: var(--color-brand);
+            color: #fff;
+        }
+
+        button.primary:hover:not(:disabled) {
+            background-color: #2563eb;
+            border-color: #2563eb;
+        }
+
+        button.danger {
+            background-color: transparent;
+            border-color: var(--color-violation);
+            color: var(--color-violation);
+        }
+
+        button.danger:hover:not(:disabled) {
+            background-color: rgba(239, 68, 68, 0.1);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .range-slider {
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        /* Widgets & Cards */
+        .widget {
+            background-color: var(--bg-surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .widget-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .kpi-value.compliant { color: var(--color-compliant); }
+        .kpi-value.violation { color: var(--color-violation); }
+
+        /* Event Stream */
+        .event-stream {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .event-item {
+            padding: 12px;
+            border-radius: 6px;
+            background-color: var(--bg-surface);
+            border-left: 4px solid var(--border-color);
+            font-size: 0.875rem;
+        }
+
+        .event-item.violation { border-left-color: var(--color-violation); }
+        .event-item.compliant { border-left-color: var(--color-compliant); }
+        .event-item.info { border-left-color: var(--color-info); }
+
+        .event-time {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        /* Video Grid Layouts */
+        .video-grid {
+            display: grid;
+            gap: 16px;
+            height: 100%;
+            width: 100%;
+        }
+
+        .grid-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+        .grid-2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+        .grid-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
+        @media (max-width: 1200px) {
+            .grid-2 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+        }
+
+        /* Camera Tile */
+        .camera-tile {
+            background-color: var(--bg-surface-elevated);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .camera-tile.maximized {
+            grid-column: 1 / -1;
+            grid-row: 1 / -1;
+            z-index: 5;
+        }
+
+        .camera-header {
+            padding: 8px 16px;
+            background-color: rgba(20, 21, 26, 0.9);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 2;
+            backdrop-filter: blur(4px);
+        }
+
+        .camera-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.75rem;
+            color: var(--color-compliant);
+            font-weight: 600;
+            letter-spacing: 0.05em;
+        }
+
+        .live-indicator::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            background-color: var(--color-compliant);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .live-indicator.idle::before {
+            background-color: var(--text-secondary);
+            animation: none;
+        }
+        .live-indicator.idle {
+            color: var(--text-secondary);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .camera-body {
+            position: relative;
+            flex-grow: 1;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        video, canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        canvas {
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .status-dot.healthy { background-color: var(--color-compliant); }
+        .status-dot.error { background-color: var(--color-violation); }
+        .status-dot.warning { background-color: var(--color-warning); }
+
+    </style>
+</head>
+<body>
+
+    <header class="topbar">
+        <div style="display: flex; align-items: center; gap: 16px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-brand);">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <h2 class="text-lg">SOC Command Center (gRPC-Web)</h2>
+        </div>
+        <div style="display: flex; gap: 24px; align-items: center;">
+            <div class="text-sm"><span id="active-cameras-count">0</span> Streams Active</div>
+            <div class="text-sm text-secondary" id="system-time">00:00:00</div>
+        </div>
+    </header>
+
+    <aside class="sidebar-left">
+        <div>
+            <h3 class="widget-title">Camera Sources</h3>
+            <label for="video-upload" class="btn primary" style="width: 100%;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M12 5v14M5 12h14"></path></svg>
+                Add Cameras (Max 4)
+            </label>
+            <input type="file" id="video-upload" accept="video/*" multiple>
+        </div>
+
+        <div class="widget">
+            <h3 class="widget-title">Engine Controls</h3>
+            <button id="start-btn" class="primary" style="width: 100%; margin-bottom: 12px;" disabled>Start Analysis</button>
+            <button id="stop-btn" style="width: 100%; margin-bottom: 12px;" disabled>Stop</button>
+            <button id="clear-btn" class="danger" style="width: 100%;">Clear Sources</button>
+        </div>
+
+        <div class="widget">
+            <h3 class="widget-title">Settings</h3>
+            <div style="margin-bottom: 16px;">
+                <label for="conf-thresh" class="text-sm">Confidence: <span id="conf-val">0.25</span></label>
+                <input type="range" id="conf-thresh" class="range-slider" min="0" max="1" step="0.05" value="0.25">
+            </div>
+            <div>
+                <label for="poll-interval" class="text-sm">Interval: <span id="interval-val">1000</span>ms</label>
+                <input type="range" id="poll-interval" class="range-slider" min="200" max="3000" step="100" value="1000">
+            </div>
+        </div>
+
+        <div class="widget">
+            <h3 class="widget-title">Filter Detections</h3>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <label class="text-sm" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="filter-compliant" checked style="accent-color: var(--color-compliant);">
+                    <span class="status-dot healthy" style="margin-right: 0;"></span> Compliant (Helmet, Vest)
+                </label>
+                <label class="text-sm" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="filter-violation" checked style="accent-color: var(--color-violation);">
+                    <span class="status-dot error" style="margin-right: 0;"></span> Violations (No Helmet, No Vest)
+                </label>
+                <label class="text-sm" style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="filter-info" checked style="accent-color: var(--color-info);">
+                    <span class="status-dot" style="margin-right: 0; background-color: var(--color-info);"></span> Info (Person)
+                </label>
+            </div>
+        </div>
+    </aside>
+
+    <main class="video-grid-container">
+        <div class="video-grid" id="video-grid">
+            <!-- Empty state -->
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); grid-column: 1 / -1;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;">
+                    <path d="M23 7l-7 5 7 5V7z"></path>
+                    <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                </svg>
+                <p>No active cameras. Add sources to begin surveillance.</p>
+            </div>
+        </div>
+    </main>
+
+    <aside class="sidebar-right">
+        <div class="widget">
+            <h3 class="widget-title">Frame Analytics (Latest)</h3>
+            <div style="display: flex; gap: 16px;">
+                <div style="flex: 1;">
+                    <div class="kpi-value compliant" id="kpi-compliant">0</div>
+                    <div class="text-xs text-secondary">Compliant</div>
+                </div>
+                <div style="flex: 1;">
+                    <div class="kpi-value violation" id="kpi-violation">0</div>
+                    <div class="text-xs text-secondary">Violations</div>
+                </div>
+            </div>
+
+
+        <div class="widget" style="flex-grow: 1; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 class="widget-title" style="margin: 0;">Live Event Stream</h3>
+                <button id="clear-events-btn" style="padding: 2px 8px; font-size: 0.7rem;">Clear</button>
+            </div>
+            <div class="event-stream" id="event-stream" style="flex-grow: 1;">
+                <div class="text-sm text-secondary" style="text-align: center; padding-top: 20px;">Waiting for events...</div>
+            </div>
+        </div>
+    </aside>
+
+    <footer class="statusbar">
+        <div><span class="status-dot healthy" id="backend-dot"></span> Envoy Proxy: <strong id="backend-status">Idle</strong></div>
+        <div>Batch Size: <strong id="global-batch-size">0</strong></div>
+        <div>Latency: <strong id="global-latency">0 ms</strong></div>
+        <div>Precision: <strong id="model-precision-val">N/A</strong></div>
+        <div>Provider: <strong id="execution-provider-val">N/A</strong></div>
+        <div style="margin-left: auto;">Endpoint: gRPC-Web (Port 8080)</div>
+    </footer>
+
+    <script>
+        // --- Class Normalization Layer ---
+        const CLASS_MAPPING = {
+            'helmet': { type: 'compliant', color: '#10b981', label: 'Helmet' },
+            'vest': { type: 'compliant', color: '#10b981', label: 'Vest' },
+            'no_helmet': { type: 'violation', color: '#ef4444', label: 'No Helmet' },
+            'no_vest': { type: 'violation', color: '#ef4444', label: 'No Vest' },
+            'person': { type: 'info', color: '#6366f1', label: 'Person' }
+        };
+
+        const UNKNOWN_CLASS = { type: 'warning', color: '#f59e0b', label: 'Unknown' };
+
+        // --- State Management ---
+        let state = {
+            cameras: [],
+            isProcessing: false,
+            isRequestPending: false,
+            timerId: null,
+            maxVideoDimension: 640,
+            eventCount: 0
+        };
+
+        // --- DOM Elements ---
+        const els = {
+            videoUpload: document.getElementById('video-upload'),
+            startBtn: document.getElementById('start-btn'),
+            stopBtn: document.getElementById('stop-btn'),
+            clearBtn: document.getElementById('clear-btn'),
+            videoGrid: document.getElementById('video-grid'),
+            confThresh: document.getElementById('conf-thresh'),
+            confVal: document.getElementById('conf-val'),
+            pollInterval: document.getElementById('poll-interval'),
+            intervalVal: document.getElementById('interval-val'),
+            backendStatus: document.getElementById('backend-status'),
+            backendDot: document.getElementById('backend-dot'),
+            globalBatchSize: document.getElementById('global-batch-size'),
+            globalLatency: document.getElementById('global-latency'),
+            activeCamerasCount: document.getElementById('active-cameras-count'),
+            sysTime: document.getElementById('system-time'),
+            kpiCompliant: document.getElementById('kpi-compliant'),
+            kpiViolation: document.getElementById('kpi-violation'),
+            eventStream: document.getElementById('event-stream'),
+            clearEventsBtn: document.getElementById('clear-events-btn')
+        };
+
+        // --- Initialization ---
+        setInterval(() => {
+            const now = new Date();
+            els.sysTime.textContent = now.toLocaleTimeString();
+        }, 1000);
+
+        // --- Event Listeners ---
+        els.confThresh.addEventListener('input', (e) => els.confVal.textContent = e.target.value);
+        els.pollInterval.addEventListener('input', (e) => els.intervalVal.textContent = e.target.value);
+
+        els.videoUpload.addEventListener('change', handleFiles);
+        els.startBtn.addEventListener('click', startAnalysis);
+        els.stopBtn.addEventListener('click', stopAnalysis);
+        els.clearBtn.addEventListener('click', clearCameras);
+        els.clearEventsBtn.addEventListener('click', () => {
+            els.eventStream.innerHTML = '';
+            state.eventCount = 0;
+        });
+
+        // Page Visibility API to pause when tab hidden
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && state.isProcessing) {
+                stopPolling();
+            } else if (!document.hidden && state.isProcessing) {
+                startPolling();
+            }
+        });
+
+        // --- Core Functions ---
+        function handleFiles(e) {
+            const files = Array.from(e.target.files).slice(0, 4); // Max 4 streams
+            if (files.length === 0) return;
+
+            clearCameras(); // Reset before adding new
+            els.videoGrid.innerHTML = '';
+
+            files.forEach((file, index) => {
+                const url = URL.createObjectURL(file);
+                createCameraTile(url, `Camera ${index + 1}`, `cam_${Date.now()}_${index}`);
+            });
+
+            updateGridLayout();
+            els.activeCamerasCount.textContent = state.cameras.length;
+            els.startBtn.disabled = false;
+        }
+
+        function createCameraTile(videoUrl, title, id) {
+            const tile = document.createElement('div');
+            tile.className = 'camera-tile';
+            tile.id = `tile-${id}`;
+
+            tile.innerHTML = `
+                <div class="camera-header">
+                    <div class="camera-title">
+                        <span class="live-indicator idle" id="ind-${id}">● LIVE / ANALYZING</span>
+                        ${title}
+                    </div>
+                    <button class="btn text-xs maximize-btn" onclick="toggleMaximize('${id}')">Maximize</button>
+                </div>
+                <div class="camera-body">
+                    <video id="vid-${id}" playsinline muted loop src="${videoUrl}"></video>
+                    <canvas id="can-${id}"></canvas>
+                </div>
+            `;
+
+            els.videoGrid.appendChild(tile);
+
+            const video = document.getElementById(`vid-${id}`);
+            const canvas = document.getElementById(`can-${id}`);
+
+            state.cameras.push({
+                id,
+                title,
+                tile,
+                video,
+                canvas,
+                ctx: canvas.getContext('2d'),
+                objectUrl: videoUrl,
+                maximized: false
+            });
+        }
+
+        function updateGridLayout() {
+            const count = state.cameras.length;
+            els.videoGrid.className = 'video-grid'; // Reset
+            
+            if (state.cameras.some(c => c.maximized)) {
+                els.videoGrid.classList.add('grid-1');
+            } else if (count === 1) {
+                els.videoGrid.classList.add('grid-1');
+            } else if (count === 2) {
+                els.videoGrid.classList.add('grid-2');
+            } else if (count >= 3) {
+                els.videoGrid.classList.add('grid-4');
+            }
+        }
+
+        window.toggleMaximize = function(id) {
+            state.cameras.forEach(cam => {
+                if (cam.id === id) {
+                    cam.maximized = !cam.maximized;
+                    if (cam.maximized) {
+                        cam.tile.classList.add('maximized');
+                    } else {
+                        cam.tile.classList.remove('maximized');
+                    }
+                } else {
+                    cam.maximized = false;
+                    cam.tile.classList.remove('maximized');
+                    cam.tile.style.display = state.cameras.find(c => c.id === id).maximized ? 'none' : 'flex';
+                }
+            });
+            updateGridLayout();
+        };
+
+        function clearCameras() {
+            stopAnalysis();
+            state.cameras.forEach(cam => {
+                URL.revokeObjectURL(cam.objectUrl);
+            });
+            state.cameras = [];
+            els.videoGrid.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); grid-column: 1 / -1;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;">
+                        <path d="M23 7l-7 5 7 5V7z"></path>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                    </svg>
+                    <p>No active cameras. Add sources to begin surveillance.</p>
+                </div>
+            `;
+            els.activeCamerasCount.textContent = '0';
+            els.startBtn.disabled = true;
+            resetStatus();
+        }
+
+        function startAnalysis() {
+            if (state.cameras.length === 0) return;
+            state.isProcessing = true;
+            els.startBtn.disabled = true;
+            els.stopBtn.disabled = false;
+            els.clearBtn.disabled = true;
+
+            state.cameras.forEach(cam => {
+                cam.video.play();
+                document.getElementById(`ind-${cam.id}`).classList.remove('idle');
+            });
+
+            startPolling();
+        }
+
+        function stopAnalysis() {
+            state.isProcessing = false;
+            els.startBtn.disabled = state.cameras.length === 0;
+            els.stopBtn.disabled = true;
+            els.clearBtn.disabled = false;
+
+            state.cameras.forEach(cam => {
+                cam.video.pause();
+                document.getElementById(`ind-${cam.id}`).classList.add('idle');
+            });
+
+            stopPolling();
+            resetStatus();
+        }
+
+        function startPolling() {
+            stopPolling();
+            pollEngine();
+        }
+
+        function stopPolling() {
+            if (state.timerId) {
+                clearTimeout(state.timerId);
+                state.timerId = null;
+            }
+        }
+
+        function resetStatus() {
+            els.backendStatus.textContent = 'Idle';
+            els.backendDot.className = 'status-dot';
+            els.globalBatchSize.textContent = '0';
+            els.globalLatency.textContent = '0 ms';
+            els.kpiCompliant.textContent = '0';
+            els.kpiViolation.textContent = '0';
+            document.getElementById('model-precision-val').textContent = 'N/A';
+            document.getElementById('execution-provider-val').textContent = 'N/A';
+        }
+
+        async function pollEngine() {
+            if (!state.isProcessing || state.isRequestPending || document.hidden) {
+                scheduleNextPoll();
+                return;
+            }
+
+            state.isRequestPending = true;
+            try {
+                await processBatch();
+                els.backendStatus.textContent = 'Online';
+                els.backendDot.className = 'status-dot healthy';
+            } catch (err) {
+                console.error("gRPC-Web Inference Error:", err);
+                els.backendStatus.textContent = 'Error: ' + err.message;
+                els.backendDot.className = 'status-dot error';
+            } finally {
+                state.isRequestPending = false;
+                scheduleNextPoll();
+            }
+        }
+
+        function scheduleNextPoll() {
+            if (state.isProcessing) {
+                const interval = parseInt(els.pollInterval.value, 10);
+                state.timerId = setTimeout(pollEngine, interval);
+            }
+        }
+
+        // --- Protobuf serialization & deserialization logic for gRPC-Web ---
+        
+        function writeVarint(value) {
+            const bytes = [];
+            while (value > 127) {
+                bytes.push((value & 127) | 128);
+                value >>>= 7;
+            }
+            bytes.push(value);
+            return bytes;
+        }
+
+        function readVarint(buffer, offsetRef) {
+            let result = 0;
+            let shift = 0;
+            while (true) {
+                const byte = buffer[offsetRef.offset++];
+                result |= (byte & 127) << shift;
+                if (!(byte & 128)) break;
+                shift += 7;
+            }
+            return result;
+        }
+
+        function skipField(data, ref, wireType) {
+            if (wireType === 0) {
+                readVarint(data, ref);
+            } else if (wireType === 1) {
+                ref.offset += 8;
+            } else if (wireType === 2) {
+                const len = readVarint(data, ref);
+                ref.offset += len;
+            } else if (wireType === 5) {
+                ref.offset += 4;
+            } else {
+                throw new Error("Unknown wire type: " + wireType);
+            }
+        }
+
+        function serializeBatchDetectRequest(frames, confidenceThreshold) {
+            let payload = [];
+            
+            // Field 1: repeated FrameRequest frames
+            for (const frame of frames) {
+                let framePayload = [];
+                
+                // Field 1: bytes image_bytes
+                framePayload.push(0x0a); // tag 1, type 2
+                framePayload.push(...writeVarint(frame.imageBytes.length));
+                for (let i = 0; i < frame.imageBytes.length; i++) {
+                    framePayload.push(frame.imageBytes[i]);
+                }
+                
+                // Field 2: string frame_id
+                const frameIdBytes = new TextEncoder().encode(frame.frameId);
+                framePayload.push(0x12); // tag 2, type 2
+                framePayload.push(...writeVarint(frameIdBytes.length));
+                for (let i = 0; i < frameIdBytes.length; i++) {
+                    framePayload.push(frameIdBytes[i]);
+                }
+                
+                // Field 3: string camera_id
+                const cameraIdBytes = new TextEncoder().encode(frame.cameraId);
+                framePayload.push(0x1a); // tag 3, type 2
+                framePayload.push(...writeVarint(cameraIdBytes.length));
+                for (let i = 0; i < cameraIdBytes.length; i++) {
+                    framePayload.push(cameraIdBytes[i]);
+                }
+                
+                // Wrap FrameRequest as field 1 of BatchDetectRequest
+                payload.push(0x0a); // tag 1, type 2
+                payload.push(...writeVarint(framePayload.length));
+                payload = payload.concat(framePayload);
+            }
+            
+            // Field 2: float confidence_threshold
+            payload.push(0x15); // tag 2, type 5
+            const floatBuf = new ArrayBuffer(4);
+            new DataView(floatBuf).setFloat32(0, confidenceThreshold, true);
+            payload = payload.concat(Array.from(new Uint8Array(floatBuf)));
+            
+            // gRPC-Web frame header: 5 bytes
+            const finalPayload = new Uint8Array(5 + payload.length);
+            finalPayload[0] = 0; // Data frame flag
+            const lenView = new DataView(finalPayload.buffer);
+            lenView.setUint32(1, payload.length, false); // big endian
+            finalPayload.set(payload, 5);
+            
+            return finalPayload;
+        }
+
+        function deserializeBatchDetectResponse(responseBuffer) {
+            let offset = 0;
+            let results = [];
+            let latencyMs = 0;
+            let batchSize = 0;
+            let modelPrecision = "";
+            let executionProvider = "";
+            
+            while (offset < responseBuffer.length) {
+                const flag = responseBuffer[offset];
+                const lenView = new DataView(responseBuffer.buffer, responseBuffer.byteOffset + offset + 1, 4);
+                const frameLen = lenView.getUint32(0, false);
+                offset += 5;
+                
+                if (flag === 0) { // Data frame
+                    const data = responseBuffer.subarray(offset, offset + frameLen);
+                    const ref = { offset: 0 };
+                    while (ref.offset < data.length) {
+                        const tagByte = data[ref.offset++];
+                        const fieldNum = tagByte >> 3;
+                        const wireType = tagByte & 7;
+                        
+                        if (fieldNum === 1 && wireType === 2) {
+                            const len = readVarint(data, ref);
+                            const end = ref.offset + len;
+                            
+                            let frameId = "";
+                            let cameraId = "";
+                            let detections = [];
+                            
+                            while (ref.offset < end) {
+                                const innerTag = data[ref.offset++];
+                                const innerFieldNum = innerTag >> 3;
+                                const innerWireType = innerTag & 7;
+                                
+                                if (innerFieldNum === 1 && innerWireType === 2) {
+                                    const strLen = readVarint(data, ref);
+                                    frameId = new TextDecoder().decode(data.subarray(ref.offset, ref.offset + strLen));
+                                    ref.offset += strLen;
+                                } else if (innerFieldNum === 2 && innerWireType === 2) {
+                                    const strLen = readVarint(data, ref);
+                                    cameraId = new TextDecoder().decode(data.subarray(ref.offset, ref.offset + strLen));
+                                    ref.offset += strLen;
+                                } else if (innerFieldNum === 3 && innerWireType === 2) {
+                                    const detLen = readVarint(data, ref);
+                                    const detEnd = ref.offset + detLen;
+                                    
+                                    let className = "";
+                                    let confidence = 0.0;
+                                    let x = 0.0, y = 0.0, width = 0.0, height = 0.0;
+                                    
+                                    while (ref.offset < detEnd) {
+                                        const detTag = data[ref.offset++];
+                                        const detFieldNum = detTag >> 3;
+                                        const detWireType = detTag & 7;
+                                        
+                                        if (detFieldNum === 1 && detWireType === 2) {
+                                            const strLen = readVarint(data, ref);
+                                            className = new TextDecoder().decode(data.subarray(ref.offset, ref.offset + strLen));
+                                            ref.offset += strLen;
+                                        } else if (detFieldNum === 2 && detWireType === 5) {
+                                            const dv = new DataView(data.buffer, data.byteOffset + ref.offset, 4);
+                                            confidence = dv.getFloat32(0, true);
+                                            ref.offset += 4;
+                                        } else if (detFieldNum === 3 && detWireType === 5) {
+                                            const dv = new DataView(data.buffer, data.byteOffset + ref.offset, 4);
+                                            x = dv.getFloat32(0, true);
+                                            ref.offset += 4;
+                                        } else if (detFieldNum === 4 && detWireType === 5) {
+                                            const dv = new DataView(data.buffer, data.byteOffset + ref.offset, 4);
+                                            y = dv.getFloat32(0, true);
+                                            ref.offset += 4;
+                                        } else if (detFieldNum === 5 && detWireType === 5) {
+                                            const dv = new DataView(data.buffer, data.byteOffset + ref.offset, 4);
+                                            width = dv.getFloat32(0, true);
+                                            ref.offset += 4;
+                                        } else if (detFieldNum === 6 && detWireType === 5) {
+                                            const dv = new DataView(data.buffer, data.byteOffset + ref.offset, 4);
+                                            height = dv.getFloat32(0, true);
+                                            ref.offset += 4;
+                                        } else {
+                                            skipField(data, ref, detWireType);
+                                        }
+                                    }
+                                    detections.push({
+                                        class: className,
+                                        confidence: confidence,
+                                        coordinates: [x, y, width, height]
+                                    });
+                                } else {
+                                    skipField(data, ref, innerWireType);
+                                }
+                            }
+                            results.push({
+                                camera_id: cameraId,
+                                detections: detections
+                            });
+                        } else if (fieldNum === 2 && wireType === 1) {
+                            const dv = new DataView(data.buffer, data.byteOffset + ref.offset, 8);
+                            latencyMs = dv.getFloat64(0, true);
+                            ref.offset += 8;
+                        } else if (fieldNum === 3 && wireType === 0) {
+                            batchSize = readVarint(data, ref);
+                        } else if (fieldNum === 4 && wireType === 2) {
+                            const strLen = readVarint(data, ref);
+                            modelPrecision = new TextDecoder().decode(data.subarray(ref.offset, ref.offset + strLen));
+                            ref.offset += strLen;
+                        } else if (fieldNum === 5 && wireType === 2) {
+                            const strLen = readVarint(data, ref);
+                            executionProvider = new TextDecoder().decode(data.subarray(ref.offset, ref.offset + strLen));
+                            ref.offset += strLen;
+                        } else {
+                            skipField(data, ref, wireType);
+                        }
+                    }
+                }
+                offset += frameLen;
+            }
+            
+            return {
+                status: "success",
+                batch_size: batchSize,
+                latency_ms: latencyMs,
+                model_precision: modelPrecision,
+                execution_provider: executionProvider,
+                results: results
+            };
+        }
+
+        // --- Processing & Rendering ---
+        async function getResizedFrameBytes(video) {
+            if (video.videoWidth === 0 || video.videoHeight === 0) return null;
+
+            const offCanvas = document.createElement('canvas');
+            let w = video.videoWidth;
+            let h = video.videoHeight;
+
+            if (w > state.maxVideoDimension) {
+                h = Math.floor(h * (state.maxVideoDimension / w));
+                w = state.maxVideoDimension;
+            }
+
+            offCanvas.width = w;
+            offCanvas.height = h;
+            const ctx = offCanvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, w, h);
+
+            return new Promise(resolve => {
+                offCanvas.toBlob(blob => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        resolve(new Uint8Array(reader.result));
+                    };
+                    reader.readAsArrayBuffer(blob);
+                }, 'image/jpeg', 0.8);
+            });
+        }
+
+        async function processBatch() {
+            let activeCameras = [];
+            let frames = [];
+            for (const cam of state.cameras) {
+                const bytes = await getResizedFrameBytes(cam.video);
+                if (bytes) {
+                    frames.push({
+                        imageBytes: bytes,
+                        frameId: `frame_${Date.now()}`,
+                        cameraId: cam.id
+                    });
+                    activeCameras.push(cam);
+                }
+            }
+
+            if (activeCameras.length === 0) return;
+
+            const requestData = serializeBatchDetectRequest(frames, parseFloat(els.confThresh.value));
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), parseInt(els.pollInterval.value) * 2 + 5000);
+
+            let response;
+            try {
+                response = await fetch('http://localhost:8080/protos.DetectorService/BatchDetect', {
+                    method: 'POST',
+                    headers: {
+                        'content-type': 'application/grpc-web+proto',
+                        'x-grpc-web': '1'
+                    },
+                    body: requestData,
+                    signal: controller.signal
+                });
+            } finally {
+                clearTimeout(timeoutId);
+            }
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`HTTP ${response.status}: ${text}`);
+            }
+
+            const responseArrayBuffer = await response.arrayBuffer();
+            const data = deserializeBatchDetectResponse(new Uint8Array(responseArrayBuffer));
+            
+            if (data.status === 'success') {
+                els.globalBatchSize.textContent = data.batch_size;
+                els.globalLatency.textContent = `${data.latency_ms.toFixed(1)} ms`;
+                document.getElementById('model-precision-val').textContent = data.model_precision || 'FP32';
+                document.getElementById('execution-provider-val').textContent = data.execution_provider || 'CPU';
+                renderResults(data.results);
+            } else {
+                throw new Error(data.message || 'gRPC response parsing failed');
+            }
+        }
+
+        function renderResults(results) {
+            let totalCompliant = 0;
+            let totalViolations = 0;
+
+            results.forEach(res => {
+                const cam = state.cameras.find(c => c.id === res.camera_id);
+                if (!cam || !cam.video || cam.video.videoWidth === 0) return;
+
+                // Sync canvas resolution to the resized frame dimensions (matching the backend inference resolution)
+                // CSS object-fit: contain on both ensures they scale together and align perfectly
+                let targetW = cam.video.videoWidth;
+                let targetH = cam.video.videoHeight;
+                if (targetW > state.maxVideoDimension) {
+                    targetH = Math.floor(targetH * (state.maxVideoDimension / targetW));
+                    targetW = state.maxVideoDimension;
+                }
+
+                if (cam.canvas.width !== targetW) {
+                    cam.canvas.width = targetW;
+                    cam.canvas.height = targetH;
+                }
+
+                const ctx = cam.ctx;
+                ctx.clearRect(0, 0, cam.canvas.width, cam.canvas.height);
+
+                let camViolations = 0;
+
+                res.detections.forEach(det => {
+                    const mapping = CLASS_MAPPING[det.class] || UNKNOWN_CLASS;
+                    
+                    if (mapping.type === 'compliant') totalCompliant++;
+                    if (mapping.type === 'violation') {
+                        totalViolations++;
+                        camViolations++;
+                    }
+
+                    // Respect filters
+                    if (mapping.type === 'compliant' && !document.getElementById('filter-compliant').checked) return;
+                    if (mapping.type === 'violation' && !document.getElementById('filter-violation').checked) return;
+                    if (mapping.type === 'info' && !document.getElementById('filter-info').checked) return;
+
+                    const [x, y, w, h] = det.coordinates;
+                    const text = `${mapping.label} ${(det.confidence * 100).toFixed(0)}%`;
+
+                    // Draw bounding box
+                    ctx.strokeStyle = mapping.color;
+                    ctx.lineWidth = Math.max(2, cam.canvas.width / 400); // Scale line width
+                    ctx.strokeRect(x, y, w, h);
+                    
+                    // Transparent fill overlay
+                    ctx.fillStyle = mapping.color + '33'; // 20% opacity hex
+                    ctx.fillRect(x, y, w, h);
+
+                    // Draw label background pill
+                    const fontSize = Math.max(10, Math.round(cam.canvas.width / 65));
+                    ctx.font = `bold ${fontSize}px sans-serif`;
+                    const textWidth = ctx.measureText(text).width;
+                    const padding = 4;
+                    const height = fontSize + padding * 2;
+                    
+                    ctx.fillStyle = mapping.color;
+                    ctx.fillRect(x, y > height ? y - height : y, textWidth + padding * 2, height);
+
+                    // Draw label text
+                    ctx.fillStyle = '#ffffff';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(text, x + padding, y > height ? y - height + height/2 : y + height/2);
+                });
+
+                // Add to event stream if violation detected
+                if (camViolations > 0) {
+                    addEvent(`Detected ${camViolations} violation(s) on ${cam.title}`, 'violation');
+                }
+            });
+
+            els.kpiCompliant.textContent = totalCompliant;
+            els.kpiViolation.textContent = totalViolations;
+        }
+
+        function addEvent(message, type = 'info') {
+            if (state.eventCount === 0) els.eventStream.innerHTML = ''; // Clear waiting message
+            
+            const el = document.createElement('div');
+            el.className = `event-item ${type}`;
+            el.innerHTML = `
+                <div class="event-time">${new Date().toLocaleTimeString()}</div>
+                <div>${message}</div>
+            `;
+            
+            els.eventStream.prepend(el);
+            state.eventCount++;
+            
+            // Keep log size manageable
+            while (els.eventStream.children.length > 50) {
+                els.eventStream.removeChild(els.eventStream.lastChild);
+            }
+        }
+
+
+
+    </script>
+</body>
+</html>
