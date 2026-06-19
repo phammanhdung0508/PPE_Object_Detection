@@ -39,9 +39,9 @@ class DetectorServicer(detector_pb2_grpc.DetectorServiceServicer):
             )
         except ValueError as exc:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
-        except Exception as exc:
+        except Exception:
             logging.exception("Inference failed")
-            context.abort(grpc.StatusCode.INTERNAL, f"inference failed: {exc}")
+            context.abort(grpc.StatusCode.INTERNAL, "An internal error occurred during inference")
 
         return detector_pb2.DetectResponse(
             detections=[
@@ -81,9 +81,9 @@ class DetectorServicer(detector_pb2_grpc.DetectorServiceServicer):
                 )
             except ValueError as exc:
                 context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
-            except Exception as exc:
+            except Exception:
                 logging.exception("Inference failed")
-                context.abort(grpc.StatusCode.INTERNAL, f"inference failed: {exc}")
+                context.abort(grpc.StatusCode.INTERNAL, "An internal error occurred during inference")
 
             total_latency_ms += latency_ms
             results.append(

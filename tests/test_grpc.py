@@ -23,9 +23,27 @@ class FakeDetector:
         ], 12.5
 
 
+class FailingDetector:
+    def detect(self, image_bytes: bytes, confidence_threshold: float = 0.25):
+        raise RuntimeError("Secret database connection failed: credentials invalid")
+
+
 @pytest.fixture()
 def grpc_stub():
     server = create_server(FakeDetector())
+    port = server.add_insecure_port("127.0.0.1:0")
+    server.start()
+    channel = grpc.insecure_channel(f"127.0.0.1:{port}")
+    try:
+        yield detector_pb2_grpc.DetectorServiceStub(channel)
+    finally:
+        channel.close()
+        server.stop(grace=0)
+
+
+@pytest.fixture()
+def failing_grpc_stub():
+    server = create_server(FailingDetector())
     port = server.add_insecure_port("127.0.0.1:0")
     server.start()
     channel = grpc.insecure_channel(f"127.0.0.1:{port}")
@@ -106,3 +124,37 @@ def test_grpc_batch_detect_valid_jpegs_returns_results(grpc_stub) -> None:
     assert len(response.results) == 2
     assert response.results[0].frame_id == "frame-1"
     assert response.results[0].camera_id == "camera-1"
+
+
+def test_grpc_detect_internal_error(failing_grpc_stub) -> None:
+    with pytest.raises(grpc.RpcError) as exc_info:
+        failing_grpc_stub.Detect(
+            detector_pb2.DetectRequest(
+                image_bytes=encode_image(),
+                confidence_threshold=0.25,
+            )
+        )
+
+    assert exc_info.value.code() == grpc.StatusCode.INTERNAL
+    assert "Secret database connection failed" not in exc_info.value.details()
+    assert exc_info.value.details() == "An internal error occurred during inference"
+
+
+def test_grpc_batch_detect_internal_error(failing_grpc_stub) -> None:
+    with pytest.raises(grpc.RpcError) as exc_info:
+        failing_grpc_stub.BatchDetect(
+            detector_pb2.BatchDetectRequest(
+                frames=[
+                    detector_pb2.FrameRequest(
+                        image_bytes=encode_image(),
+                        frame_id="frame-1",
+                        camera_id="camera-1",
+                    ),
+                ],
+                confidence_threshold=0.25,
+            )
+        )
+
+    assert exc_info.value.code() == grpc.StatusCode.INTERNAL
+    assert "Secret database connection failed" not in exc_info.value.details()
+    assert exc_info.value.details() == "An internal error occurred during inference"
