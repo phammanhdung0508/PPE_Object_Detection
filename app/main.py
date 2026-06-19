@@ -1,3 +1,4 @@
+import asyncio
 import json
 import pathlib
 import time
@@ -6,23 +7,18 @@ from typing import Any
 
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import (HTMLResponse, JSONResponse, RedirectResponse,
+                               Response)
 
 from app.config import ENABLE_MODEL_WARMUP, MAX_BATCH_SIZE, load_model_metadata
 from app.logging_config import get_logger
 from app.model import model
-from app.monitoring import (
-    metrics_payload,
-    record_batch_success,
-    record_invalid_image,
-    record_prediction_error,
-    record_success,
-    set_model_loaded,
-)
+from app.monitoring import (metrics_payload, record_batch_success,
+                            record_invalid_image, record_prediction_error,
+                            record_success, set_model_loaded)
 from app.postprocessing import postprocess
 from app.preprocessing import preprocess_image
 from app.visualization import draw_detections
-
 
 logger = get_logger()
 
@@ -43,9 +39,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+
 @app.get("/")
 def root():
     return RedirectResponse(url="/demo")
+
 
 @app.get("/health")
 def health() -> dict[str, Any]:
@@ -84,7 +82,9 @@ async def predict(
     try:
         image_bytes = await file.read()
         preprocess_started_at = time.perf_counter()
-        input_tensor, original_size, scale, pad, brightness = preprocess_image(image_bytes)
+        input_tensor, original_size, scale, pad, brightness = preprocess_image(
+            image_bytes
+        )
         preprocess_ms = round((time.perf_counter() - preprocess_started_at) * 1000, 2)
 
         inference_started_at = time.perf_counter()
@@ -92,7 +92,9 @@ async def predict(
         inference_ms = round((time.perf_counter() - inference_started_at) * 1000, 2)
 
         postprocess_started_at = time.perf_counter()
-        detections = postprocess(predictions, original_size, scale, pad, confidence_threshold)
+        detections = postprocess(
+            predictions, original_size, scale, pad, confidence_threshold
+        )
         postprocess_ms = round((time.perf_counter() - postprocess_started_at) * 1000, 2)
         latency_ms = round((time.perf_counter() - started_at) * 1000, 2)
         timing = {
@@ -104,17 +106,21 @@ async def predict(
 
         record_success(detections, original_size, brightness, timing)
 
-        logger.info(json.dumps({
-            "event": "prediction",
-            "filename": file.filename,
-            "status": "success",
-            "threshold": confidence_threshold,
-            "image_width": original_size[0],
-            "image_height": original_size[1],
-            "brightness": round(brightness, 2),
-            "timing": timing,
-            "detections": detections,
-        }))
+        logger.info(
+            json.dumps(
+                {
+                    "event": "prediction",
+                    "filename": file.filename,
+                    "status": "success",
+                    "threshold": confidence_threshold,
+                    "image_width": original_size[0],
+                    "image_height": original_size[1],
+                    "brightness": round(brightness, 2),
+                    "timing": timing,
+                    "detections": detections,
+                }
+            )
+        )
 
         return JSONResponse(
             content={
@@ -126,26 +132,34 @@ async def predict(
         )
     except ValueError as exc:
         record_invalid_image(str(exc))
-        logger.warning(json.dumps({
-            "event": "prediction",
-            "filename": file.filename,
-            "status": "error",
-            "error_type": "invalid_image",
-            "message": str(exc),
-        }))
+        logger.warning(
+            json.dumps(
+                {
+                    "event": "prediction",
+                    "filename": file.filename,
+                    "status": "error",
+                    "error_type": "invalid_image",
+                    "message": str(exc),
+                }
+            )
+        )
         return JSONResponse(
             status_code=400,
             content={"status": "error", "message": str(exc)},
         )
     except Exception as exc:
         record_prediction_error()
-        logger.exception(json.dumps({
-            "event": "prediction",
-            "filename": file.filename,
-            "status": "error",
-            "error_type": "prediction_error",
-            "message": str(exc),
-        }))
+        logger.exception(
+            json.dumps(
+                {
+                    "event": "prediction",
+                    "filename": file.filename,
+                    "status": "error",
+                    "error_type": "prediction_error",
+                    "message": str(exc),
+                }
+            )
+        )
         return JSONResponse(
             status_code=500,
             content={"status": "error", "message": "Prediction failed"},
@@ -163,7 +177,9 @@ async def predict_annotated(
     try:
         image_bytes = await file.read()
         preprocess_started_at = time.perf_counter()
-        input_tensor, original_size, scale, pad, brightness = preprocess_image(image_bytes)
+        input_tensor, original_size, scale, pad, brightness = preprocess_image(
+            image_bytes
+        )
         preprocess_ms = round((time.perf_counter() - preprocess_started_at) * 1000, 2)
 
         inference_started_at = time.perf_counter()
@@ -171,7 +187,9 @@ async def predict_annotated(
         inference_ms = round((time.perf_counter() - inference_started_at) * 1000, 2)
 
         postprocess_started_at = time.perf_counter()
-        detections = postprocess(predictions, original_size, scale, pad, confidence_threshold)
+        detections = postprocess(
+            predictions, original_size, scale, pad, confidence_threshold
+        )
         annotated_image = draw_detections(image_bytes, detections)
         postprocess_ms = round((time.perf_counter() - postprocess_started_at) * 1000, 2)
         latency_ms = round((time.perf_counter() - started_at) * 1000, 2)
@@ -184,17 +202,21 @@ async def predict_annotated(
 
         record_success(detections, original_size, brightness, timing)
 
-        logger.info(json.dumps({
-            "event": "annotated_prediction",
-            "filename": file.filename,
-            "status": "success",
-            "threshold": confidence_threshold,
-            "image_width": original_size[0],
-            "image_height": original_size[1],
-            "brightness": round(brightness, 2),
-            "timing": timing,
-            "detection_count": len(detections),
-        }))
+        logger.info(
+            json.dumps(
+                {
+                    "event": "annotated_prediction",
+                    "filename": file.filename,
+                    "status": "success",
+                    "threshold": confidence_threshold,
+                    "image_width": original_size[0],
+                    "image_height": original_size[1],
+                    "brightness": round(brightness, 2),
+                    "timing": timing,
+                    "detection_count": len(detections),
+                }
+            )
+        )
 
         return Response(
             content=annotated_image,
@@ -206,30 +228,40 @@ async def predict_annotated(
         )
     except ValueError as exc:
         record_invalid_image(str(exc))
-        logger.warning(json.dumps({
-            "event": "annotated_prediction",
-            "filename": file.filename,
-            "status": "error",
-            "error_type": "invalid_image",
-            "message": str(exc),
-        }))
+        logger.warning(
+            json.dumps(
+                {
+                    "event": "annotated_prediction",
+                    "filename": file.filename,
+                    "status": "error",
+                    "error_type": "invalid_image",
+                    "message": str(exc),
+                }
+            )
+        )
         return JSONResponse(
             status_code=400,
             content={"status": "error", "message": str(exc)},
         )
     except Exception as exc:
         record_prediction_error()
-        logger.exception(json.dumps({
-            "event": "annotated_prediction",
-            "filename": file.filename,
-            "status": "error",
-            "error_type": "prediction_error",
-            "message": str(exc),
-        }))
+        logger.exception(
+            json.dumps(
+                {
+                    "event": "annotated_prediction",
+                    "filename": file.filename,
+                    "status": "error",
+                    "error_type": "prediction_error",
+                    "message": str(exc),
+                }
+            )
+        )
         return JSONResponse(
             status_code=500,
             content={"status": "error", "message": "Prediction failed"},
         )
+
+
 @app.post("/predict-batch")
 async def predict_batch(
     files: list[UploadFile] = File(...),
@@ -238,7 +270,9 @@ async def predict_batch(
     validate_confidence_threshold(confidence_threshold)
 
     if not files:
-        raise HTTPException(status_code=422, detail="At least one image file is required")
+        raise HTTPException(
+            status_code=422, detail="At least one image file is required"
+        )
     if len(files) > MAX_BATCH_SIZE:
         raise HTTPException(
             status_code=413,
@@ -251,13 +285,23 @@ async def predict_batch(
         image_stats: list[dict[str, Any]] = []
         input_tensors: list[np.ndarray] = []
 
+        files_data = []
         for file in files:
             image_bytes = await file.read()
-            input_tensor, original_size, scale, pad, brightness = preprocess_image(image_bytes)
+            files_data.append((file.filename, image_bytes))
+
+        tasks = [
+            asyncio.to_thread(preprocess_image, image_bytes)
+            for _, image_bytes in files_data
+        ]
+        preprocess_results = await asyncio.gather(*tasks)
+
+        for (filename, _), result in zip(files_data, preprocess_results):
+            input_tensor, original_size, scale, pad, brightness = result
             input_tensors.append(input_tensor)
             image_stats.append(
                 {
-                    "filename": file.filename,
+                    "filename": filename,
                     "original_size": original_size,
                     "scale": scale,
                     "pad": pad,
@@ -278,7 +322,9 @@ async def predict_batch(
                 )
         except Exception:
             used_fallback = True
-            batch_predictions = [model.predict(input_tensor) for input_tensor in input_tensors]
+            batch_predictions = [
+                model.predict(input_tensor) for input_tensor in input_tensors
+            ]
 
         inference_ms = round((time.perf_counter() - inference_started_at) * 1000, 2)
 
@@ -374,4 +420,3 @@ def demo_ui() -> HTMLResponse:
     if not demo_path.exists():
         raise HTTPException(status_code=404, detail="Demo UI not found")
     return HTMLResponse(content=demo_path.read_text())
-
