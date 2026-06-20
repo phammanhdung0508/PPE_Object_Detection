@@ -7,15 +7,19 @@ from typing import Any
 
 import numpy as np
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import (HTMLResponse, JSONResponse, RedirectResponse,
-                               Response)
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 from app.config import ENABLE_MODEL_WARMUP, MAX_BATCH_SIZE, load_model_metadata
 from app.logging_config import get_logger
 from app.model import model
-from app.monitoring import (metrics_payload, record_batch_success,
-                            record_invalid_image, record_prediction_error,
-                            record_success, set_model_loaded)
+from app.monitoring import (
+    metrics_payload,
+    record_batch_success,
+    record_invalid_image,
+    record_prediction_error,
+    record_success,
+    set_model_loaded,
+)
 from app.postprocessing import postprocess
 from app.preprocessing import preprocess_image
 from app.visualization import draw_detections

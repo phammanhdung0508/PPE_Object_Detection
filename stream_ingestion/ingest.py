@@ -91,7 +91,9 @@ def draw_detections(
         )
 
 
-def open_video_writer(output_path: str, fps: float, frame_size: tuple[int, int]) -> cv2.VideoWriter:
+def open_video_writer(
+    output_path: str, fps: float, frame_size: tuple[int, int]
+) -> cv2.VideoWriter:
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(output_path, fourcc, max(fps, 1.0), frame_size)
@@ -204,24 +206,58 @@ def run_ingestion(args: argparse.Namespace) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Read camera/video frames and send them to gRPC inference.")
-    parser.add_argument("--source", default="0", help="Camera index, video path, RTSP URL, or HTTP stream URL")
-    parser.add_argument("--grpc-target", default="localhost:50051", help="Detector gRPC target")
-    parser.add_argument("--confidence", type=float, default=0.25, help="Confidence threshold")
-    parser.add_argument("--frame-stride", type=int, default=15, help="Send every Nth frame")
-    parser.add_argument("--max-width", type=int, default=640, help="Downscale frames above this width")
-    parser.add_argument("--jpeg-quality", type=int, default=85, help="JPEG quality for frame payloads")
-    parser.add_argument("--timeout", type=float, default=10.0, help="gRPC request timeout seconds")
-    parser.add_argument("--max-frames", type=int, default=0, help="Stop after N source frames; 0 runs forever")
-    parser.add_argument("--show", action="store_true", help="Display annotated video frames in a window")
+    parser = argparse.ArgumentParser(
+        description="Read camera/video frames and send them to gRPC inference."
+    )
+    parser.add_argument(
+        "--source",
+        default="0",
+        help="Camera index, video path, RTSP URL, or HTTP stream URL",
+    )
+    parser.add_argument(
+        "--grpc-target", default="localhost:50051", help="Detector gRPC target"
+    )
+    parser.add_argument(
+        "--confidence", type=float, default=0.25, help="Confidence threshold"
+    )
+    parser.add_argument(
+        "--frame-stride", type=int, default=15, help="Send every Nth frame"
+    )
+    parser.add_argument(
+        "--max-width", type=int, default=640, help="Downscale frames above this width"
+    )
+    parser.add_argument(
+        "--jpeg-quality", type=int, default=85, help="JPEG quality for frame payloads"
+    )
+    parser.add_argument(
+        "--timeout", type=float, default=10.0, help="gRPC request timeout seconds"
+    )
+    parser.add_argument(
+        "--max-frames",
+        type=int,
+        default=0,
+        help="Stop after N source frames; 0 runs forever",
+    )
+    parser.add_argument(
+        "--show", action="store_true", help="Display annotated video frames in a window"
+    )
     parser.add_argument("--output", help="Write annotated video to this MP4 path")
-    parser.add_argument("--reconnect", action="store_true", help="Reconnect when the stream drops")
-    parser.add_argument("--reconnect-delay", type=float, default=3.0, help="Seconds between reconnect attempts")
+    parser.add_argument(
+        "--reconnect", action="store_true", help="Reconnect when the stream drops"
+    )
+    parser.add_argument(
+        "--reconnect-delay",
+        type=float,
+        default=3.0,
+        help="Seconds between reconnect attempts",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
     run_ingestion(parse_args())
 
 
