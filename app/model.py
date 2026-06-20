@@ -1,4 +1,5 @@
 from pathlib import Path
+
 import numpy as np
 
 from app.onnxruntime_dlls import add_nvidia_dll_directories
@@ -6,7 +7,12 @@ from app.onnxruntime_dlls import add_nvidia_dll_directories
 add_nvidia_dll_directories()
 import onnxruntime as ort
 
-from app.config import INPUT_SIZE, MODEL_PATH, ORT_INTER_OP_THREADS, ORT_INTRA_OP_THREADS
+from app.config import (
+    INPUT_SIZE,
+    MODEL_PATH,
+    ORT_INTER_OP_THREADS,
+    ORT_INTRA_OP_THREADS,
+)
 from app.logging_config import get_logger
 
 if hasattr(ort, "preload_dlls"):

@@ -2,7 +2,6 @@ from typing import Any
 
 from prometheus_client import Counter, Gauge, Histogram, generate_latest
 
-
 REQUESTS_TOTAL = Counter(
     "ppe_requests_total",
     "Total prediction requests.",

@@ -1,7 +1,6 @@
-import os
 import json
+import os
 from pathlib import Path
-
 
 MODEL_PATH = os.getenv("MODEL_PATH", "models/yolo26_ppe_fp16.onnx")
 MODEL_METADATA_PATH = os.getenv("MODEL_METADATA_PATH", "models/model_metadata.json")

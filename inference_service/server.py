@@ -1,12 +1,12 @@
-from concurrent import futures
 import argparse
 import logging
+from concurrent import futures
 from typing import Protocol
 
 import grpc
 
-from protos import detector_pb2, detector_pb2_grpc
 from inference_service.detector import ObjectDetector
+from protos import detector_pb2, detector_pb2_grpc
 
 
 class DetectorProtocol(Protocol):

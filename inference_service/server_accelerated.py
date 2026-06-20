@@ -1,6 +1,6 @@
-from concurrent import futures
 import argparse
 import logging
+from concurrent import futures
 from typing import Protocol
 
 import grpc
