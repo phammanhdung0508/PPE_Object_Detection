@@ -30,7 +30,11 @@ def read_batch_frames(
     for camera_index, capture in enumerate(captures):
         ok, frame = capture.read()
         if not ok:
-            logging.warning("source ended camera_id=%s source=%s", camera_index, sources[camera_index])
+            logging.warning(
+                "source ended camera_id=%s source=%s",
+                camera_index,
+                sources[camera_index],
+            )
             continue
         inference_frame = resize_for_inference(frame, max_width)
         frames.append(
@@ -87,7 +91,10 @@ def run_batched_ingestion(args: argparse.Namespace) -> None:
                 total_ms,
             )
 
-            if args.max_batches and frame_index // args.frame_stride >= args.max_batches:
+            if (
+                args.max_batches
+                and frame_index // args.frame_stride >= args.max_batches
+            ):
                 break
     finally:
         for capture in captures:
@@ -96,23 +103,45 @@ def run_batched_ingestion(args: argparse.Namespace) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Simulate multi-camera ingestion with client-side gRPC batching.")
-    parser.add_argument("--source", default="sample_videos/demo.mp4", help="Source repeated for simulated cameras")
-    parser.add_argument("--sources", nargs="*", help="Explicit list of video/camera sources")
-    parser.add_argument("--camera-count", type=int, default=4, help="Number of simulated cameras when --sources is omitted")
-    parser.add_argument("--batch-size", type=int, default=4, help="Frames per BatchDetect request")
+    parser = argparse.ArgumentParser(
+        description="Simulate multi-camera ingestion with client-side gRPC batching."
+    )
+    parser.add_argument(
+        "--source",
+        default="sample_videos/demo.mp4",
+        help="Source repeated for simulated cameras",
+    )
+    parser.add_argument(
+        "--sources", nargs="*", help="Explicit list of video/camera sources"
+    )
+    parser.add_argument(
+        "--camera-count",
+        type=int,
+        default=4,
+        help="Number of simulated cameras when --sources is omitted",
+    )
+    parser.add_argument(
+        "--batch-size", type=int, default=4, help="Frames per BatchDetect request"
+    )
     parser.add_argument("--grpc-target", default="localhost:50051")
     parser.add_argument("--confidence", type=float, default=0.25)
     parser.add_argument("--frame-stride", type=int, default=15)
     parser.add_argument("--max-width", type=int, default=640)
     parser.add_argument("--jpeg-quality", type=int, default=85)
     parser.add_argument("--timeout", type=float, default=30.0)
-    parser.add_argument("--max-batches", type=int, default=0, help="Stop after N batch requests; 0 runs until streams end")
+    parser.add_argument(
+        "--max-batches",
+        type=int,
+        default=0,
+        help="Stop after N batch requests; 0 runs until streams end",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
     run_batched_ingestion(parse_args())
 
 

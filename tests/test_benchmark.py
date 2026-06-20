@@ -12,7 +12,9 @@ class FastBatchDetector:
     model_precision = "FP32"
     execution_provider = "CPUExecutionProvider"
 
-    def detect_batch(self, image_payloads: list[bytes], confidence_threshold: float = 0.25):
+    def detect_batch(
+        self, image_payloads: list[bytes], confidence_threshold: float = 0.25
+    ):
         return [[] for _ in image_payloads], 5.0
 
 
@@ -35,7 +37,11 @@ def test_batch_detect_latency_boundary() -> None:
     response = stub.BatchDetect(
         detector_pb2.BatchDetectRequest(
             frames=[
-                detector_pb2.FrameRequest(image_bytes=image_bytes, frame_id=str(index), camera_id=f"cam_{index}")
+                detector_pb2.FrameRequest(
+                    image_bytes=image_bytes,
+                    frame_id=str(index),
+                    camera_id=f"cam_{index}",
+                )
                 for index in range(4)
             ],
             confidence_threshold=0.25,
@@ -65,7 +71,10 @@ def test_batch_detect_rejects_oversized_batch() -> None:
         try:
             stub.BatchDetect(
                 detector_pb2.BatchDetectRequest(
-                    frames=[detector_pb2.FrameRequest(image_bytes=image_bytes) for _ in range(3)]
+                    frames=[
+                        detector_pb2.FrameRequest(image_bytes=image_bytes)
+                        for _ in range(3)
+                    ]
                 ),
                 timeout=5,
             )

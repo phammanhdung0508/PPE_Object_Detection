@@ -41,7 +41,9 @@ class DetectorServicer(detector_pb2_grpc.DetectorServiceServicer):
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
         except Exception:
             logging.exception("Inference failed")
-            context.abort(grpc.StatusCode.INTERNAL, "An internal error occurred during inference")
+            context.abort(
+                grpc.StatusCode.INTERNAL, "An internal error occurred during inference"
+            )
 
         return detector_pb2.DetectResponse(
             detections=[
@@ -73,7 +75,9 @@ class DetectorServicer(detector_pb2_grpc.DetectorServiceServicer):
         total_latency_ms = 0.0
         for frame in request.frames:
             if not frame.image_bytes:
-                context.abort(grpc.StatusCode.INVALID_ARGUMENT, "all frames require image_bytes")
+                context.abort(
+                    grpc.StatusCode.INVALID_ARGUMENT, "all frames require image_bytes"
+                )
             try:
                 detections, latency_ms = self.detector.detect(
                     frame.image_bytes,
@@ -83,7 +87,10 @@ class DetectorServicer(detector_pb2_grpc.DetectorServiceServicer):
                 context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(exc))
             except Exception:
                 logging.exception("Inference failed")
-                context.abort(grpc.StatusCode.INTERNAL, "An internal error occurred during inference")
+                context.abort(
+                    grpc.StatusCode.INTERNAL,
+                    "An internal error occurred during inference",
+                )
 
             total_latency_ms += latency_ms
             results.append(
@@ -131,7 +138,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
     args = parse_args()
 
     detector = ObjectDetector()

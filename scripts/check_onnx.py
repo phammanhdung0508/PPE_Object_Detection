@@ -13,9 +13,14 @@ import onnxruntime as ort
 if hasattr(ort, "preload_dlls"):
     ort.preload_dlls(directory="")
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Validate an ONNX model for ONNX Runtime.")
-    parser.add_argument("--model", default="models/yolo26_ppe.onnx", help="Path to ONNX model")
+    parser = argparse.ArgumentParser(
+        description="Validate an ONNX model for ONNX Runtime."
+    )
+    parser.add_argument(
+        "--model", default="models/yolo26_ppe.onnx", help="Path to ONNX model"
+    )
     args = parser.parse_args()
 
     model_path = Path(args.model)

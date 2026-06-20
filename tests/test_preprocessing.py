@@ -14,7 +14,9 @@ def encode_image(image: np.ndarray) -> bytes:
 
 def test_preprocess_valid_image_returns_yolo_tensor() -> None:
     image = np.full((120, 160, 3), 128, dtype=np.uint8)
-    tensor, original_size, scale, pad, brightness = preprocess_image(encode_image(image))
+    tensor, original_size, scale, pad, brightness = preprocess_image(
+        encode_image(image)
+    )
 
     assert tensor.shape == (1, 3, INPUT_SIZE, INPUT_SIZE)
     assert tensor.dtype == np.float32

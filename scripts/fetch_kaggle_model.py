@@ -58,10 +58,16 @@ def publish_model(source: Path, release: str, model_name: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Download Kaggle kernel output and publish ONNX model.")
+    parser = argparse.ArgumentParser(
+        description="Download Kaggle kernel output and publish ONNX model."
+    )
     parser.add_argument("--kernel", default=DEFAULT_KERNEL, help="Kaggle kernel slug")
-    parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Local output directory")
-    parser.add_argument("--model-name", default=DEFAULT_MODEL_NAME, help="Expected ONNX model file name")
+    parser.add_argument(
+        "--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Local output directory"
+    )
+    parser.add_argument(
+        "--model-name", default=DEFAULT_MODEL_NAME, help="Expected ONNX model file name"
+    )
     parser.add_argument("--release", default="v1", help="Model release directory name")
     parser.add_argument(
         "--include-fp16",

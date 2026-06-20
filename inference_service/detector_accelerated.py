@@ -21,7 +21,9 @@ class AcceleratedObjectDetector:
     def __init__(self) -> None:
         self.model = YoloOnnxModel()
         self.model_path = self._select_model_path()
-        self.model_precision = "FP16" if self.model_path.name.endswith("fp16.onnx") else "FP32"
+        self.model_precision = (
+            "FP16" if self.model_path.name.endswith("fp16.onnx") else "FP32"
+        )
 
     def _select_model_path(self) -> Path:
         explicit_path = os.getenv("ACCELERATED_MODEL_PATH")
@@ -73,8 +75,14 @@ class AcceleratedObjectDetector:
             batch_predictions = [self.model.predict(tensor) for tensor in tensors]
 
         results: list[list[dict[str, Any]]] = []
-        for predictions, (original_size, scale, pad) in zip(batch_predictions, image_stats):
-            results.append(postprocess(predictions, original_size, scale, pad, confidence_threshold))
+        for predictions, (original_size, scale, pad) in zip(
+            batch_predictions, image_stats
+        ):
+            results.append(
+                postprocess(
+                    predictions, original_size, scale, pad, confidence_threshold
+                )
+            )
 
         latency_ms = round((time.perf_counter() - started_at) * 1000, 2)
         return results, latency_ms

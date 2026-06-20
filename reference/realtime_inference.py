@@ -256,7 +256,9 @@ def annotate_frame(
         f"People: {len(people)} | Helmets: {len(helmets)} | "
         f"Vests: {len(vests)} | PPE OK: {compliant_count} | FPS: {fps:.1f}"
     )
-    cv2.rectangle(frame, (10, 10), (min(frame.shape[1] - 10, 700), 45), (30, 30, 30), -1)
+    cv2.rectangle(
+        frame, (10, 10), (min(frame.shape[1] - 10, 700), 45), (30, 30, 30), -1
+    )
     cv2.putText(
         frame,
         summary,

@@ -53,7 +53,9 @@ def benchmark_batch(
 
     for _ in range(warmup):
         stub.BatchDetect(
-            detector_pb2.BatchDetectRequest(frames=frames, confidence_threshold=confidence),
+            detector_pb2.BatchDetectRequest(
+                frames=frames, confidence_threshold=confidence
+            ),
             timeout=timeout,
         )
 
@@ -63,7 +65,9 @@ def benchmark_batch(
     for _ in range(iterations):
         started_at = time.perf_counter()
         response = stub.BatchDetect(
-            detector_pb2.BatchDetectRequest(frames=frames, confidence_threshold=confidence),
+            detector_pb2.BatchDetectRequest(
+                frames=frames, confidence_threshold=confidence
+            ),
             timeout=timeout,
         )
         elapsed_ms = (time.perf_counter() - started_at) * 1000
@@ -85,7 +89,9 @@ def benchmark_batch(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Benchmark real batched gRPC inference latency.")
+    parser = argparse.ArgumentParser(
+        description="Benchmark real batched gRPC inference latency."
+    )
     parser.add_argument("--grpc-target", default="localhost:50051")
     parser.add_argument("--image", type=Path, help="Optional benchmark image path")
     parser.add_argument("--batch-sizes", nargs="+", type=int, default=[1, 2, 4, 8])
@@ -116,7 +122,9 @@ def main() -> None:
     ]
     channel.close()
 
-    print("| batch_size | precision | provider | avg_latency_ms | p95_latency_ms | throughput_fps |")
+    print(
+        "| batch_size | precision | provider | avg_latency_ms | p95_latency_ms | throughput_fps |"
+    )
     print("|---:|---|---|---:|---:|---:|")
     for row in rows:
         print(

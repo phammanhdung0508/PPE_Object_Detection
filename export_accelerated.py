@@ -4,12 +4,22 @@ from pathlib import Path
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Export YOLO26 weights to accelerated inference formats.")
-    parser.add_argument("--weights", default="models/kaggle/construction_output/runs/construction_safety_yolo26_finetune/weights/best.pt")
+    parser = argparse.ArgumentParser(
+        description="Export YOLO26 weights to accelerated inference formats."
+    )
+    parser.add_argument(
+        "--weights",
+        default="models/kaggle/construction_output/runs/construction_safety_yolo26_finetune/weights/best.pt",
+    )
     parser.add_argument("--imgsz", type=int, default=640)
     parser.add_argument("--opset", type=int, default=12)
     parser.add_argument("--output-dir", default="models/accelerated")
-    parser.add_argument("--formats", nargs="+", default=["onnx-fp32", "onnx-fp16"], choices=["onnx-fp32", "onnx-fp16", "engine", "openvino"])
+    parser.add_argument(
+        "--formats",
+        nargs="+",
+        default=["onnx-fp32", "onnx-fp16"],
+        choices=["onnx-fp32", "onnx-fp16", "engine", "openvino"],
+    )
     return parser.parse_args()
 
 
@@ -52,9 +62,13 @@ def main() -> None:
     outputs: list[Path] = []
 
     if "onnx-fp32" in args.formats:
-        outputs.append(export_onnx(model, args, half=False, output_name="yolo26_ppe.onnx"))
+        outputs.append(
+            export_onnx(model, args, half=False, output_name="yolo26_ppe.onnx")
+        )
     if "onnx-fp16" in args.formats:
-        outputs.append(export_onnx(model, args, half=True, output_name="yolo26_ppe_fp16.onnx"))
+        outputs.append(
+            export_onnx(model, args, half=True, output_name="yolo26_ppe_fp16.onnx")
+        )
     if "engine" in args.formats:
         outputs.append(export_other(model, args, "engine"))
     if "openvino" in args.formats:

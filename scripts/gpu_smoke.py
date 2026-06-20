@@ -28,7 +28,9 @@ def print_nvidia_smi(label: str) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run repeated ONNX inference for GPU checks.")
+    parser = argparse.ArgumentParser(
+        description="Run repeated ONNX inference for GPU checks."
+    )
     parser.add_argument("--seconds", type=float, default=15.0)
     parser.add_argument("--sample-smi", action="store_true")
     args = parser.parse_args()
@@ -56,7 +58,9 @@ def main() -> None:
             print_nvidia_smi(f"iter_{iterations}")
 
     elapsed = time.perf_counter() - started_at
-    print(f"iterations={iterations} seconds={elapsed:.2f} ips={iterations / elapsed:.2f}")
+    print(
+        f"iterations={iterations} seconds={elapsed:.2f} ips={iterations / elapsed:.2f}"
+    )
     if args.sample_smi:
         print_nvidia_smi("after_loop")
 

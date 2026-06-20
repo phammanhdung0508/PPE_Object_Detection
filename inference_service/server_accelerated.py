@@ -52,7 +52,11 @@ class AcceleratedDetectorServicer(detector_pb2_grpc.DetectorServiceServicer):
             ),
             context,
         )
-        result = batch_response.results[0] if batch_response.results else detector_pb2.FrameDetections()
+        result = (
+            batch_response.results[0]
+            if batch_response.results
+            else detector_pb2.FrameDetections()
+        )
         return detector_pb2.DetectResponse(
             detections=result.detections,
             latency_ms=batch_response.latency_ms,
@@ -69,9 +73,14 @@ class AcceleratedDetectorServicer(detector_pb2_grpc.DetectorServiceServicer):
 
         confidence_threshold = request.confidence_threshold or 0.25
         if not 0.0 <= confidence_threshold <= 1.0:
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "confidence_threshold must be between 0 and 1")
+            context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT,
+                "confidence_threshold must be between 0 and 1",
+            )
         if any(not frame.image_bytes for frame in request.frames):
-            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "all frames require image_bytes")
+            context.abort(
+                grpc.StatusCode.INVALID_ARGUMENT, "all frames require image_bytes"
+            )
 
         try:
             detections_by_frame, latency_ms = self.detector.detect_batch(
@@ -89,7 +98,9 @@ class AcceleratedDetectorServicer(detector_pb2_grpc.DetectorServiceServicer):
                 detector_pb2.FrameDetections(
                     frame_id=frame.frame_id,
                     camera_id=frame.camera_id,
-                    detections=[to_detection_message(detection) for detection in detections],
+                    detections=[
+                        to_detection_message(detection) for detection in detections
+                    ],
                 )
                 for frame, detections in zip(request.frames, detections_by_frame)
             ],
@@ -100,7 +111,9 @@ class AcceleratedDetectorServicer(detector_pb2_grpc.DetectorServiceServicer):
         )
 
 
-def create_server(detector: BatchDetectorProtocol, max_workers: int = 4, max_batch_size: int = 8) -> grpc.Server:
+def create_server(
+    detector: BatchDetectorProtocol, max_workers: int = 4, max_batch_size: int = 8
+) -> grpc.Server:
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=max_workers))
     detector_pb2_grpc.add_DetectorServiceServicer_to_server(
         AcceleratedDetectorServicer(detector, max_batch_size),
@@ -110,7 +123,9 @@ def create_server(detector: BatchDetectorProtocol, max_workers: int = 4, max_bat
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run accelerated batched YOLO26 gRPC inference service.")
+    parser = argparse.ArgumentParser(
+        description="Run accelerated batched YOLO26 gRPC inference service."
+    )
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=50051)
     parser.add_argument("--workers", type=int, default=4)
@@ -119,7 +134,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+    )
     args = parse_args()
     detector = AcceleratedObjectDetector()
     detector.load()

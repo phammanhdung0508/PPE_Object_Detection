@@ -67,7 +67,9 @@ def main() -> None:
             smi(f"iter_{iterations}")
 
     elapsed = time.perf_counter() - started_at
-    print(f"iterations={iterations} seconds={elapsed:.2f} ips={iterations / elapsed:.2f}")
+    print(
+        f"iterations={iterations} seconds={elapsed:.2f} ips={iterations / elapsed:.2f}"
+    )
     smi("after")
 
 

@@ -1,5 +1,3 @@
-from concurrent import futures
-
 import cv2
 import grpc
 import numpy as np
@@ -11,7 +9,9 @@ from protos import detector_pb2, detector_pb2_grpc
 
 class FakeDetector:
     def detect(self, image_bytes: bytes, confidence_threshold: float = 0.25):
-        image = cv2.imdecode(np.frombuffer(image_bytes, dtype=np.uint8), cv2.IMREAD_COLOR)
+        image = cv2.imdecode(
+            np.frombuffer(image_bytes, dtype=np.uint8), cv2.IMREAD_COLOR
+        )
         if image is None:
             raise ValueError("Invalid image, please check the camera")
         return [

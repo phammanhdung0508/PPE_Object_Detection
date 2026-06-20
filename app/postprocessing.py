@@ -84,7 +84,12 @@ def postprocess(
             {
                 "class": CLASS_NAMES[class_ids[int(index)]],
                 "confidence": round(float(scores[int(index)]), 4),
-                "coordinates": [round(x, 2), round(y, 2), round(width, 2), round(height, 2)],
+                "coordinates": [
+                    round(x, 2),
+                    round(y, 2),
+                    round(width, 2),
+                    round(height, 2),
+                ],
             }
         )
 

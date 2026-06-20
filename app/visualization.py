@@ -19,9 +19,7 @@ def draw_detections(image_bytes: bytes, detections: list[dict[str, Any]]) -> byt
         label = f"{detection['class']} {detection['confidence']:.2f}"
 
         cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        text_size, baseline = cv2.getTextSize(
-            label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2
-        )
+        text_size, baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         text_width, text_height = text_size
         label_y1 = max(0, y1 - text_height - baseline - 6)
         label_y2 = y1 if y1 > text_height + baseline + 6 else text_height + baseline + 6

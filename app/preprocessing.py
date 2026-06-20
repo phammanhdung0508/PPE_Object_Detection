@@ -27,7 +27,9 @@ def preprocess_image(
     scale = min(INPUT_SIZE / original_width, INPUT_SIZE / original_height)
     resized_width = int(round(original_width * scale))
     resized_height = int(round(original_height * scale))
-    resized = cv2.resize(rgb, (resized_width, resized_height), interpolation=cv2.INTER_LINEAR)
+    resized = cv2.resize(
+        rgb, (resized_width, resized_height), interpolation=cv2.INTER_LINEAR
+    )
 
     padded = np.full((INPUT_SIZE, INPUT_SIZE, 3), 114, dtype=np.uint8)
     pad_x = (INPUT_SIZE - resized_width) // 2

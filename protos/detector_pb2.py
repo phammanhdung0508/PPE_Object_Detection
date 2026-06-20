@@ -4,47 +4,44 @@
 # source: protos/detector.proto
 # Protobuf Python Version: 5.28.1
 """Generated protocol buffer code."""
+
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import descriptor_pool as _descriptor_pool
 from google.protobuf import runtime_version as _runtime_version
 from google.protobuf import symbol_database as _symbol_database
 from google.protobuf.internal import builder as _builder
+
 _runtime_version.ValidateProtobufRuntimeVersion(
-    _runtime_version.Domain.PUBLIC,
-    5,
-    28,
-    1,
-    '',
-    'protos/detector.proto'
+    _runtime_version.Domain.PUBLIC, 5, 28, 1, "", "protos/detector.proto"
 )
 # @@protoc_insertion_point(imports)
 
 _sym_db = _symbol_database.Default()
 
 
-
-
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15protos/detector.proto\x12\x06protos\"g\n\rDetectRequest\x12\x13\n\x0bimage_bytes\x18\x01 \x01(\x0c\x12\x1c\n\x14\x63onfidence_threshold\x18\x02 \x01(\x02\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\t\x12\x11\n\tcamera_id\x18\x04 \x01(\t\"h\n\tDetection\x12\x12\n\nclass_name\x18\x01 \x01(\t\x12\x12\n\nconfidence\x18\x02 \x01(\x02\x12\t\n\x01x\x18\x03 \x01(\x02\x12\t\n\x01y\x18\x04 \x01(\x02\x12\r\n\x05width\x18\x05 \x01(\x02\x12\x0e\n\x06height\x18\x06 \x01(\x02\"K\n\x0e\x44\x65tectResponse\x12%\n\ndetections\x18\x01 \x03(\x0b\x32\x11.protos.Detection\x12\x12\n\nlatency_ms\x18\x02 \x01(\x01\"H\n\x0c\x46rameRequest\x12\x13\n\x0bimage_bytes\x18\x01 \x01(\x0c\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\t\x12\x11\n\tcamera_id\x18\x03 \x01(\t\"X\n\x12\x42\x61tchDetectRequest\x12$\n\x06\x66rames\x18\x01 \x03(\x0b\x32\x14.protos.FrameRequest\x12\x1c\n\x14\x63onfidence_threshold\x18\x02 \x01(\x02\"]\n\x0f\x46rameDetections\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\t\x12\x11\n\tcamera_id\x18\x02 \x01(\t\x12%\n\ndetections\x18\x03 \x03(\x0b\x32\x11.protos.Detection\"\x9c\x01\n\x13\x42\x61tchDetectResponse\x12(\n\x07results\x18\x01 \x03(\x0b\x32\x17.protos.FrameDetections\x12\x12\n\nlatency_ms\x18\x02 \x01(\x01\x12\x12\n\nbatch_size\x18\x03 \x01(\x05\x12\x17\n\x0fmodel_precision\x18\x04 \x01(\t\x12\x1a\n\x12\x65xecution_provider\x18\x05 \x01(\t2\x92\x01\n\x0f\x44\x65tectorService\x12\x37\n\x06\x44\x65tect\x12\x15.protos.DetectRequest\x1a\x16.protos.DetectResponse\x12\x46\n\x0b\x42\x61tchDetect\x12\x1a.protos.BatchDetectRequest\x1a\x1b.protos.BatchDetectResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
+    b'\n\x15protos/detector.proto\x12\x06protos"g\n\rDetectRequest\x12\x13\n\x0bimage_bytes\x18\x01 \x01(\x0c\x12\x1c\n\x14\x63onfidence_threshold\x18\x02 \x01(\x02\x12\x10\n\x08\x66rame_id\x18\x03 \x01(\t\x12\x11\n\tcamera_id\x18\x04 \x01(\t"h\n\tDetection\x12\x12\n\nclass_name\x18\x01 \x01(\t\x12\x12\n\nconfidence\x18\x02 \x01(\x02\x12\t\n\x01x\x18\x03 \x01(\x02\x12\t\n\x01y\x18\x04 \x01(\x02\x12\r\n\x05width\x18\x05 \x01(\x02\x12\x0e\n\x06height\x18\x06 \x01(\x02"K\n\x0e\x44\x65tectResponse\x12%\n\ndetections\x18\x01 \x03(\x0b\x32\x11.protos.Detection\x12\x12\n\nlatency_ms\x18\x02 \x01(\x01"H\n\x0c\x46rameRequest\x12\x13\n\x0bimage_bytes\x18\x01 \x01(\x0c\x12\x10\n\x08\x66rame_id\x18\x02 \x01(\t\x12\x11\n\tcamera_id\x18\x03 \x01(\t"X\n\x12\x42\x61tchDetectRequest\x12$\n\x06\x66rames\x18\x01 \x03(\x0b\x32\x14.protos.FrameRequest\x12\x1c\n\x14\x63onfidence_threshold\x18\x02 \x01(\x02"]\n\x0f\x46rameDetections\x12\x10\n\x08\x66rame_id\x18\x01 \x01(\t\x12\x11\n\tcamera_id\x18\x02 \x01(\t\x12%\n\ndetections\x18\x03 \x03(\x0b\x32\x11.protos.Detection"\x9c\x01\n\x13\x42\x61tchDetectResponse\x12(\n\x07results\x18\x01 \x03(\x0b\x32\x17.protos.FrameDetections\x12\x12\n\nlatency_ms\x18\x02 \x01(\x01\x12\x12\n\nbatch_size\x18\x03 \x01(\x05\x12\x17\n\x0fmodel_precision\x18\x04 \x01(\t\x12\x1a\n\x12\x65xecution_provider\x18\x05 \x01(\t2\x92\x01\n\x0f\x44\x65tectorService\x12\x37\n\x06\x44\x65tect\x12\x15.protos.DetectRequest\x1a\x16.protos.DetectResponse\x12\x46\n\x0b\x42\x61tchDetect\x12\x1a.protos.BatchDetectRequest\x1a\x1b.protos.BatchDetectResponseb\x06proto3'
+)
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
-_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'protos.detector_pb2', _globals)
+_builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, "protos.detector_pb2", _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
-  DESCRIPTOR._loaded_options = None
-  _globals['_DETECTREQUEST']._serialized_start=33
-  _globals['_DETECTREQUEST']._serialized_end=136
-  _globals['_DETECTION']._serialized_start=138
-  _globals['_DETECTION']._serialized_end=242
-  _globals['_DETECTRESPONSE']._serialized_start=244
-  _globals['_DETECTRESPONSE']._serialized_end=319
-  _globals['_FRAMEREQUEST']._serialized_start=321
-  _globals['_FRAMEREQUEST']._serialized_end=393
-  _globals['_BATCHDETECTREQUEST']._serialized_start=395
-  _globals['_BATCHDETECTREQUEST']._serialized_end=483
-  _globals['_FRAMEDETECTIONS']._serialized_start=485
-  _globals['_FRAMEDETECTIONS']._serialized_end=578
-  _globals['_BATCHDETECTRESPONSE']._serialized_start=581
-  _globals['_BATCHDETECTRESPONSE']._serialized_end=737
-  _globals['_DETECTORSERVICE']._serialized_start=740
-  _globals['_DETECTORSERVICE']._serialized_end=886
+    DESCRIPTOR._loaded_options = None
+    _globals["_DETECTREQUEST"]._serialized_start = 33
+    _globals["_DETECTREQUEST"]._serialized_end = 136
+    _globals["_DETECTION"]._serialized_start = 138
+    _globals["_DETECTION"]._serialized_end = 242
+    _globals["_DETECTRESPONSE"]._serialized_start = 244
+    _globals["_DETECTRESPONSE"]._serialized_end = 319
+    _globals["_FRAMEREQUEST"]._serialized_start = 321
+    _globals["_FRAMEREQUEST"]._serialized_end = 393
+    _globals["_BATCHDETECTREQUEST"]._serialized_start = 395
+    _globals["_BATCHDETECTREQUEST"]._serialized_end = 483
+    _globals["_FRAMEDETECTIONS"]._serialized_start = 485
+    _globals["_FRAMEDETECTIONS"]._serialized_end = 578
+    _globals["_BATCHDETECTRESPONSE"]._serialized_start = 581
+    _globals["_BATCHDETECTRESPONSE"]._serialized_end = 737
+    _globals["_DETECTORSERVICE"]._serialized_start = 740
+    _globals["_DETECTORSERVICE"]._serialized_end = 886
 # @@protoc_insertion_point(module_scope)

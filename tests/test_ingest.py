@@ -1,4 +1,3 @@
-import cv2
 import numpy as np
 
 from protos import detector_pb2
