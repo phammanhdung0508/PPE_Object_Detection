@@ -1,11 +1,11 @@
 import time
 
 import cv2
+import grpc
 import numpy as np
 
 from inference_service.server_accelerated import create_server
 from protos import detector_pb2, detector_pb2_grpc
-import grpc
 
 
 class FastBatchDetector:

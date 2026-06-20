@@ -1,4 +1,3 @@
-from concurrent import futures
 
 import cv2
 import grpc

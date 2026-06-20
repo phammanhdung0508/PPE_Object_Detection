@@ -2,7 +2,6 @@ from pathlib import Path
 
 from locust import HttpUser, between, task
 
-
 SAMPLE_IMAGE = Path(__file__).with_name("sample.jpg")
 
 

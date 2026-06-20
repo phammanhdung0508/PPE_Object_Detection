@@ -4,7 +4,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 DEFAULT_KERNEL = "dungsunf/ppe-yolo26-training"
 DEFAULT_OUTPUT_DIR = Path("models/kaggle/output")
 DEFAULT_MODEL_NAME = "yolo26_ppe.onnx"
