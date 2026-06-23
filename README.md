@@ -247,18 +247,29 @@ Optional formats, if hardware/runtime is installed:
 .venv/bin/python export_accelerated.py --formats openvino
 ```
 
-Docker CPU accelerated target:
-
-```bash
-docker build -f Dockerfile.cpu -t ppe-inference-cpu .
-docker run --rm -p 50051:50051 ppe-inference-cpu
-```
-
-Docker batched pipeline:
+Docker GPU batched pipeline:
 
 ```bash
 docker compose --profile batched up --build inference-service stream-ingestion-batched
 ```
+
+This starts:
+
+```text
+inference-service          accelerated gRPC server on localhost:50051
+stream-ingestion-batched   batched multi-camera/video ingestion client
+```
+
+The batched client reads `STREAM_SOURCE`, `CAMERA_COUNT`, `BATCH_SIZE`, and `FRAME_STRIDE` from `.env`.
+For the default setup, place a video at `sample_videos/demo.mp4`.
+
+Check the runtime provider:
+
+```bash
+docker compose logs -f inference-service stream-ingestion-batched
+```
+
+The batch logs should show `provider=CUDAExecutionProvider` when GPU inference is active.
 
 Measured benchmark on the current local CPU environment using ONNX Runtime CPU provider:
 
@@ -416,10 +427,63 @@ Make sure the demo video exists before starting the ingestion container:
 sample_videos/demo.mp4
 ```
 
-Run only the gRPC video pipeline:
+### GPU Batched Streaming
+
+The default Docker path uses the accelerated GPU image. It requires Docker GPU support, NVIDIA drivers, and the NVIDIA Container Toolkit on Linux/WSL2. Docker Desktop on Windows should have WSL2 GPU integration enabled.
+
+Set stream options in `.env`:
+
+```text
+STREAM_SOURCE=sample_videos/demo.mp4
+FRAME_STRIDE=15
+CAMERA_COUNT=4
+BATCH_SIZE=4
+```
+
+Run the GPU batched pipeline:
 
 ```bash
-docker compose up --build inference-service stream-ingestion
+docker compose --profile batched up --build inference-service stream-ingestion-batched
+```
+
+Stop it:
+
+```bash
+docker compose --profile batched down
+```
+
+Useful logs:
+
+```bash
+docker compose logs -f inference-service
+docker compose logs -f stream-ingestion-batched
+```
+
+Expected successful runtime:
+
+```text
+ppe-inference-service is healthy
+batch ... precision=FP16 provider=CUDAExecutionProvider ...
+```
+
+If the logs show `CPUExecutionProvider`, Docker can run the app but the container did not get GPU access. Check `nvidia-smi` on the host and verify Docker GPU support with:
+
+```bash
+docker run --rm --gpus all nvidia/cuda:12.4.1-base-ubuntu22.04 nvidia-smi
+```
+
+### FastAPI Demo App
+
+Run the browser/API demo with the inference service:
+
+```bash
+docker compose up --build inference-service envoy ppe-api
+```
+
+Open:
+
+```text
+http://localhost:8000/demo
 ```
 
 Start the full local stack:
@@ -450,6 +514,16 @@ Grafana default login:
 ```text
 admin / admin
 ```
+
+### Docker Build Notes
+
+The runtime image pins `onnxruntime-gpu==1.20.1` and includes CUDA 12 runtime libraries from pip. This avoids the common startup error:
+
+```text
+ImportError: libcudart.so.13: cannot open shared object file
+```
+
+The generated gRPC protobuf files require the real `protobuf` package. Do not replace it with the placeholder `google` package.
 
 ## Monitoring
 

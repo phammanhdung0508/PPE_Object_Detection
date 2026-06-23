@@ -4,6 +4,7 @@ services:
       context: .
       target: accelerated
     container_name: ppe-inference-service
+    gpus: all
     env_file:
       - .env
     ports:
@@ -98,6 +99,7 @@ services:
       context: .
       target: api
     container_name: ppe-api
+    gpus: all
     env_file:
       - .env
     ports:
