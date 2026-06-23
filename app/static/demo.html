@@ -126,6 +126,20 @@
             border-color: var(--text-secondary);
         }
 
+        button:focus-visible,
+        .btn:focus-visible,
+        input[type="range"]:focus-visible,
+        input[type="checkbox"]:focus-visible {
+            outline: 2px solid var(--color-brand);
+            outline-offset: 2px;
+        }
+
+        #video-upload:focus-visible + .btn {
+            outline: 2px solid var(--color-brand);
+            outline-offset: 2px;
+            background-color: var(--bg-surface-hover);
+        }
+
         button.primary {
             background-color: var(--color-brand);
             border-color: var(--color-brand);
@@ -152,8 +166,16 @@
             cursor: not-allowed;
         }
 
-        input[type="file"] {
-            display: none;
+        .visually-hidden {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
         }
 
         .range-slider {
@@ -358,11 +380,11 @@
     <aside class="sidebar-left">
         <div>
             <h3 class="widget-title">Camera Sources</h3>
+            <input type="file" id="video-upload" class="visually-hidden" accept="video/*" multiple>
             <label for="video-upload" class="btn primary" style="width: 100%;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M12 5v14M5 12h14"></path></svg>
                 Add Cameras (Max 4)
             </label>
-            <input type="file" id="video-upload" accept="video/*" multiple>
         </div>
 
         <div class="widget">
@@ -553,7 +575,7 @@
                         <span class="live-indicator idle" id="ind-${id}">● LIVE / ANALYZING</span>
                         ${title}
                     </div>
-                    <button class="btn text-xs maximize-btn" onclick="toggleMaximize('${id}')">Maximize</button>
+                    <button class="btn text-xs maximize-btn" aria-pressed="false" onclick="toggleMaximize('${id}')">Maximize</button>
                 </div>
                 <div class="camera-body">
                     <video id="vid-${id}" playsinline muted loop src="${videoUrl}"></video>
@@ -594,18 +616,29 @@
         }
 
         window.toggleMaximize = function(id) {
+            const currentCam = state.cameras.find(c => c.id === id);
+            const isNowMaximized = !currentCam.maximized;
+
             state.cameras.forEach(cam => {
+                const btn = cam.tile.querySelector('.maximize-btn');
                 if (cam.id === id) {
-                    cam.maximized = !cam.maximized;
+                    cam.maximized = isNowMaximized;
                     if (cam.maximized) {
                         cam.tile.classList.add('maximized');
+                        btn.textContent = 'Restore';
+                        btn.setAttribute('aria-pressed', 'true');
                     } else {
                         cam.tile.classList.remove('maximized');
+                        btn.textContent = 'Maximize';
+                        btn.setAttribute('aria-pressed', 'false');
                     }
+                    cam.tile.style.display = 'flex';
                 } else {
                     cam.maximized = false;
                     cam.tile.classList.remove('maximized');
-                    cam.tile.style.display = state.cameras.find(c => c.id === id).maximized ? 'none' : 'flex';
+                    cam.tile.style.display = isNowMaximized ? 'none' : 'flex';
+                    btn.textContent = 'Maximize';
+                    btn.setAttribute('aria-pressed', 'false');
                 }
             });
             updateGridLayout();
