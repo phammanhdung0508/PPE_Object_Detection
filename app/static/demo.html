@@ -152,8 +152,21 @@
             cursor: not-allowed;
         }
 
-        input[type="file"] {
-            display: none;
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        input:focus-visible + label.btn {
+            outline: 2px solid var(--color-brand);
+            outline-offset: 2px;
         }
 
         .range-slider {
@@ -358,11 +371,11 @@
     <aside class="sidebar-left">
         <div>
             <h3 class="widget-title">Camera Sources</h3>
+            <input type="file" id="video-upload" class="visually-hidden" accept="video/*" multiple>
             <label for="video-upload" class="btn primary" style="width: 100%;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M12 5v14M5 12h14"></path></svg>
                 Add Cameras (Max 4)
             </label>
-            <input type="file" id="video-upload" accept="video/*" multiple>
         </div>
 
         <div class="widget">
