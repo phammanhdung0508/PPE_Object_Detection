@@ -13,78 +13,106 @@ def postprocess(
     pad: tuple[int, int],
     confidence_threshold: float,
 ) -> list[dict[str, Any]]:
-    boxes: list[list[float]] = []
-    scores: list[float] = []
-    class_ids: list[int] = []
+    """
+    Vectorized post-processing of YOLO predictions.
+    Supports both [x1, y1, x2, y2, conf, class_id] and
+    [x_center, y_center, w, h, (objectness), class_scores...] formats.
+    """
+    if predictions.size == 0:
+        return []
+
     original_width, original_height = original_size
     pad_x, pad_y = pad
 
-    for row in predictions:
-        if row.shape[0] < 6:
-            continue
+    if predictions.shape[1] == 6:
+        # Format: [x1, y1, x2, y2, confidence, class_id]
+        confs = predictions[:, 4]
+        class_ids = predictions[:, 5].astype(int)
 
-        if row.shape[0] == 6:
-            x1, y1, x2, y2 = row[:4]
-            confidence = float(row[4])
-            class_id = int(row[5])
+        mask = (confs >= confidence_threshold) & (class_ids < len(CLASS_NAMES))
+        if not np.any(mask):
+            return []
 
-            if confidence < confidence_threshold or class_id >= len(CLASS_NAMES):
-                continue
+        filtered_preds = predictions[mask]
+        confs = confs[mask]
+        class_ids = class_ids[mask]
 
-            x1 = (float(x1) - pad_x) / scale
-            y1 = (float(y1) - pad_y) / scale
-            x2 = (float(x2) - pad_x) / scale
-            y2 = (float(y2) - pad_y) / scale
+        x1 = (filtered_preds[:, 0] - pad_x) / scale
+        y1 = (filtered_preds[:, 1] - pad_y) / scale
+        x2 = (filtered_preds[:, 2] - pad_x) / scale
+        y2 = (filtered_preds[:, 3] - pad_y) / scale
+
+    else:
+        # Format: [x_center, y_center, width, height, (optional objectness), class_scores...]
+        if predictions.shape[1] == 4 + len(CLASS_NAMES):
+            objectness = 1.0
+            class_scores = predictions[:, 4:]
         else:
-            x_center, y_center, width, height = row[:4]
-            if row.shape[0] == 4 + len(CLASS_NAMES):
-                objectness = 1.0
-                class_scores = row[4:]
-            else:
-                objectness = float(row[4])
-                class_scores = row[5:]
+            objectness = predictions[:, 4]
+            class_scores = predictions[:, 5:]
 
-            class_id = int(np.argmax(class_scores))
-            class_confidence = float(class_scores[class_id])
-            confidence = objectness * class_confidence
+        class_ids = np.argmax(class_scores, axis=1)
+        class_confs = class_scores[np.arange(len(class_scores)), class_ids]
+        confs = objectness * class_confs
 
-            if confidence < confidence_threshold or class_id >= len(CLASS_NAMES):
-                continue
+        mask = (confs >= confidence_threshold) & (class_ids < len(CLASS_NAMES))
+        if not np.any(mask):
+            return []
 
-            x1 = (float(x_center) - float(width) / 2 - pad_x) / scale
-            y1 = (float(y_center) - float(height) / 2 - pad_y) / scale
-            x2 = (float(x_center) + float(width) / 2 - pad_x) / scale
-            y2 = (float(y_center) + float(height) / 2 - pad_y) / scale
+        filtered_preds = predictions[mask]
+        confs = confs[mask]
+        class_ids = class_ids[mask]
 
-        x1 = max(0.0, min(x1, original_width - 1.0))
-        y1 = max(0.0, min(y1, original_height - 1.0))
-        x2 = max(0.0, min(x2, original_width - 1.0))
-        y2 = max(0.0, min(y2, original_height - 1.0))
+        x_center = filtered_preds[:, 0]
+        y_center = filtered_preds[:, 1]
+        w = filtered_preds[:, 2]
+        h = filtered_preds[:, 3]
 
-        box_width = x2 - x1
-        box_height = y2 - y1
-        if box_width <= 0 or box_height <= 0:
-            continue
+        x1 = (x_center - w / 2 - pad_x) / scale
+        y1 = (y_center - h / 2 - pad_y) / scale
+        x2 = (x_center + w / 2 - pad_x) / scale
+        y2 = (y_center + h / 2 - pad_y) / scale
 
-        boxes.append([x1, y1, box_width, box_height])
-        scores.append(confidence)
-        class_ids.append(class_id)
+    # Clip coordinates to image boundaries
+    x1 = np.clip(x1, 0, original_width - 1.0)
+    y1 = np.clip(y1, 0, original_height - 1.0)
+    x2 = np.clip(x2, 0, original_width - 1.0)
+    y2 = np.clip(y2, 0, original_height - 1.0)
 
+    widths = x2 - x1
+    heights = y2 - y1
+
+    # Filter out invalid boxes with non-positive dimensions
+    valid_mask = (widths > 0) & (heights > 0)
+    if not np.any(valid_mask):
+        return []
+
+    final_boxes = np.stack([x1[valid_mask], y1[valid_mask], widths[valid_mask], heights[valid_mask]], axis=1)
+    final_confs = confs[valid_mask]
+    final_class_ids = class_ids[valid_mask]
+
+    # Apply Non-Maximum Suppression (NMS)
     selected_indices = cv2.dnn.NMSBoxes(
-        bboxes=boxes,
-        scores=scores,
+        bboxes=final_boxes.tolist(),
+        scores=final_confs.tolist(),
         score_threshold=confidence_threshold,
         nms_threshold=IOU_THRESHOLD,
     )
 
     detections: list[dict[str, Any]] = []
-    for index in np.array(selected_indices).reshape(-1):
-        x, y, width, height = boxes[int(index)]
+    # Handle different return types of NMSBoxes across OpenCV versions
+    for index in np.array(selected_indices).flatten():
+        idx = int(index)
         detections.append(
             {
-                "class": CLASS_NAMES[class_ids[int(index)]],
-                "confidence": round(float(scores[int(index)]), 4),
-                "coordinates": [round(x, 2), round(y, 2), round(width, 2), round(height, 2)],
+                "class": CLASS_NAMES[final_class_ids[idx]],
+                "confidence": round(float(final_confs[idx]), 4),
+                "coordinates": [
+                    round(float(final_boxes[idx, 0]), 2),
+                    round(float(final_boxes[idx, 1]), 2),
+                    round(float(final_boxes[idx, 2]), 2),
+                    round(float(final_boxes[idx, 3]), 2),
+                ],
             }
         )
 
