@@ -24,6 +24,25 @@
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
 
+        /* Accessibility Utilities */
+        .visually-hidden {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+
+        :focus-visible {
+            outline: 2px solid var(--text-primary) !important;
+            outline-offset: 2px !important;
+            box-shadow: 0 0 0 4px rgba(226, 232, 240, 0.2) !important;
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -152,8 +171,10 @@
             cursor: not-allowed;
         }
 
-        input[type="file"] {
-            display: none;
+        #video-upload:focus-visible + label {
+            outline: 2px solid var(--text-primary) !important;
+            outline-offset: 2px !important;
+            box-shadow: 0 0 0 4px rgba(226, 232, 240, 0.2) !important;
         }
 
         .range-slider {
@@ -344,7 +365,7 @@
 
     <header class="topbar">
         <div style="display: flex; align-items: center; gap: 16px;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-brand);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-brand);" aria-hidden="true">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
             <h2 class="text-lg">SOC Command Center (gRPC-Web)</h2>
@@ -358,11 +379,11 @@
     <aside class="sidebar-left">
         <div>
             <h3 class="widget-title">Camera Sources</h3>
+            <input type="file" id="video-upload" class="visually-hidden" accept="video/*" multiple>
             <label for="video-upload" class="btn primary" style="width: 100%;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M12 5v14M5 12h14"></path></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>
                 Add Cameras (Max 4)
             </label>
-            <input type="file" id="video-upload" accept="video/*" multiple>
         </div>
 
         <div class="widget">
@@ -407,7 +428,7 @@
         <div class="video-grid" id="video-grid">
             <!-- Empty state -->
             <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); grid-column: 1 / -1;">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;" aria-hidden="true">
                     <path d="M23 7l-7 5 7 5V7z"></path>
                     <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
                 </svg>
@@ -553,7 +574,11 @@
                         <span class="live-indicator idle" id="ind-${id}">● LIVE / ANALYZING</span>
                         ${title}
                     </div>
-                    <button class="btn text-xs maximize-btn" onclick="toggleMaximize('${id}')">Maximize</button>
+                    <button class="btn text-xs maximize-btn"
+                            id="max-btn-${id}"
+                            aria-label="Maximize ${title}"
+                            aria-pressed="false"
+                            onclick="toggleMaximize('${id}')">Maximize</button>
                 </div>
                 <div class="camera-body">
                     <video id="vid-${id}" playsinline muted loop src="${videoUrl}"></video>
@@ -594,18 +619,39 @@
         }
 
         window.toggleMaximize = function(id) {
+            const targetCam = state.cameras.find(c => c.id === id);
+            if (!targetCam) return;
+
+            targetCam.maximized = !targetCam.maximized;
+
             state.cameras.forEach(cam => {
+                const btn = document.getElementById(`max-btn-${cam.id}`);
                 if (cam.id === id) {
-                    cam.maximized = !cam.maximized;
                     if (cam.maximized) {
                         cam.tile.classList.add('maximized');
+                        cam.tile.style.display = 'flex';
+                        if (btn) {
+                            btn.textContent = 'Restore';
+                            btn.setAttribute('aria-pressed', 'true');
+                            btn.setAttribute('aria-label', `Restore ${cam.title}`);
+                        }
                     } else {
                         cam.tile.classList.remove('maximized');
+                        if (btn) {
+                            btn.textContent = 'Maximize';
+                            btn.setAttribute('aria-pressed', 'false');
+                            btn.setAttribute('aria-label', `Maximize ${cam.title}`);
+                        }
                     }
                 } else {
                     cam.maximized = false;
                     cam.tile.classList.remove('maximized');
-                    cam.tile.style.display = state.cameras.find(c => c.id === id).maximized ? 'none' : 'flex';
+                    cam.tile.style.display = targetCam.maximized ? 'none' : 'flex';
+                    if (btn) {
+                        btn.textContent = 'Maximize';
+                        btn.setAttribute('aria-pressed', 'false');
+                        btn.setAttribute('aria-label', `Maximize ${cam.title}`);
+                    }
                 }
             });
             updateGridLayout();
@@ -619,7 +665,7 @@
             state.cameras = [];
             els.videoGrid.innerHTML = `
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-secondary); grid-column: 1 / -1;">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 16px;" aria-hidden="true">
                         <path d="M23 7l-7 5 7 5V7z"></path>
                         <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
                     </svg>
