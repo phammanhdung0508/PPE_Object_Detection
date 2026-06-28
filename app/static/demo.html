@@ -553,7 +553,7 @@
                         <span class="live-indicator idle" id="ind-${id}">● LIVE / ANALYZING</span>
                         ${title}
                     </div>
-                    <button class="btn text-xs maximize-btn" onclick="toggleMaximize('${id}')">Maximize</button>
+                    <button id="max-btn-${id}" class="btn text-xs maximize-btn" onclick="toggleMaximize('${id}')" aria-label="Maximize ${title}" aria-pressed="false">Maximize</button>
                 </div>
                 <div class="camera-body">
                     <video id="vid-${id}" playsinline muted loop src="${videoUrl}"></video>
@@ -594,18 +594,33 @@
         }
 
         window.toggleMaximize = function(id) {
+            const currentCam = state.cameras.find(c => c.id === id);
+            const isCurrentlyMaximized = currentCam.maximized;
+
             state.cameras.forEach(cam => {
+                const btn = document.getElementById(`max-btn-${cam.id}`);
                 if (cam.id === id) {
-                    cam.maximized = !cam.maximized;
+                    cam.maximized = !isCurrentlyMaximized;
                     if (cam.maximized) {
                         cam.tile.classList.add('maximized');
+                        btn.textContent = 'Restore';
+                        btn.setAttribute('aria-label', `Restore ${cam.title}`);
+                        btn.setAttribute('aria-pressed', 'true');
                     } else {
                         cam.tile.classList.remove('maximized');
+                        btn.textContent = 'Maximize';
+                        btn.setAttribute('aria-label', `Maximize ${cam.title}`);
+                        btn.setAttribute('aria-pressed', 'false');
                     }
                 } else {
                     cam.maximized = false;
                     cam.tile.classList.remove('maximized');
-                    cam.tile.style.display = state.cameras.find(c => c.id === id).maximized ? 'none' : 'flex';
+                    cam.tile.style.display = !isCurrentlyMaximized ? 'none' : 'flex';
+                    if (btn) {
+                        btn.textContent = 'Maximize';
+                        btn.setAttribute('aria-label', `Maximize ${cam.title}`);
+                        btn.setAttribute('aria-pressed', 'false');
+                    }
                 }
             });
             updateGridLayout();
