@@ -19,22 +19,28 @@ def preprocess_image(
     if original_height < MIN_IMAGE_SIZE or original_width < MIN_IMAGE_SIZE:
         raise ValueError("Invalid image, image is too small")
 
-    brightness = float(np.mean(image))
-    if brightness < 3.0:
-        raise ValueError("Invalid image, please check the camera")
-
-    rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     scale = min(INPUT_SIZE / original_width, INPUT_SIZE / original_height)
     resized_width = int(round(original_width * scale))
     resized_height = int(round(original_height * scale))
-    resized = cv2.resize(rgb, (resized_width, resized_height), interpolation=cv2.INTER_LINEAR)
+
+    # Optimization: Resize first to reduce pixel count for subsequent operations
+    resized_bgr = cv2.resize(image, (resized_width, resized_height), interpolation=cv2.INTER_LINEAR)
+
+    # Optimization: Compute brightness on the resized image
+    brightness = float(np.mean(resized_bgr))
+    if brightness < 3.0:
+        raise ValueError("Invalid image, please check the camera")
+
+    # Optimization: Convert color on the resized image
+    resized_rgb = cv2.cvtColor(resized_bgr, cv2.COLOR_BGR2RGB)
 
     padded = np.full((INPUT_SIZE, INPUT_SIZE, 3), 114, dtype=np.uint8)
     pad_x = (INPUT_SIZE - resized_width) // 2
     pad_y = (INPUT_SIZE - resized_height) // 2
-    padded[pad_y : pad_y + resized_height, pad_x : pad_x + resized_width] = resized
+    padded[pad_y : pad_y + resized_height, pad_x : pad_x + resized_width] = resized_rgb
 
-    normalized = padded.astype(np.float32) / 255.0
+    # Optimization: Multiplication by reciprocal is often faster than division
+    normalized = padded.astype(np.float32) * (1.0 / 255.0)
     tensor = np.transpose(normalized, (2, 0, 1))[None, ...]
     return (
         np.ascontiguousarray(tensor),
