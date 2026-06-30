@@ -152,8 +152,34 @@
             cursor: not-allowed;
         }
 
+        .visually-hidden {
+            position: absolute !important;
+            width: 1px !important;
+            height: 1px !important;
+            padding: 0 !important;
+            margin: -1px !important;
+            overflow: hidden !important;
+            clip: rect(0, 0, 0, 0) !important;
+            white-space: nowrap !important;
+            border: 0 !important;
+        }
+
+        /* Focus Indicators */
+        :focus-visible {
+            outline: 2px solid var(--text-primary);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(226, 232, 240, 0.3);
+        }
+
+        input[type="file"]:focus-visible + label.btn {
+            outline: 2px solid var(--text-primary);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px rgba(226, 232, 240, 0.3);
+            border-color: var(--text-secondary);
+        }
+
         input[type="file"] {
-            display: none;
+            /* Handled by .visually-hidden */
         }
 
         .range-slider {
@@ -358,11 +384,11 @@
     <aside class="sidebar-left">
         <div>
             <h3 class="widget-title">Camera Sources</h3>
+            <input type="file" id="video-upload" class="visually-hidden" accept="video/*" multiple>
             <label for="video-upload" class="btn primary" style="width: 100%;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 8px;"><path d="M12 5v14M5 12h14"></path></svg>
                 Add Cameras (Max 4)
             </label>
-            <input type="file" id="video-upload" accept="video/*" multiple>
         </div>
 
         <div class="widget">
@@ -434,7 +460,7 @@
         <div class="widget" style="flex-grow: 1; display: flex; flex-direction: column;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <h3 class="widget-title" style="margin: 0;">Live Event Stream</h3>
-                <button id="clear-events-btn" style="padding: 2px 8px; font-size: 0.7rem;">Clear</button>
+                <button id="clear-events-btn" style="padding: 2px 8px; font-size: 0.7rem;" aria-label="Clear event stream">Clear</button>
             </div>
             <div class="event-stream" id="event-stream" style="flex-grow: 1;">
                 <div class="text-sm text-secondary" style="text-align: center; padding-top: 20px;">Waiting for events...</div>
@@ -553,7 +579,7 @@
                         <span class="live-indicator idle" id="ind-${id}">● LIVE / ANALYZING</span>
                         ${title}
                     </div>
-                    <button class="btn text-xs maximize-btn" onclick="toggleMaximize('${id}')">Maximize</button>
+                    <button class="btn text-xs maximize-btn" id="max-btn-${id}" onclick="toggleMaximize('${id}')" aria-label="Maximize ${title}">Maximize</button>
                 </div>
                 <div class="camera-body">
                     <video id="vid-${id}" playsinline muted loop src="${videoUrl}"></video>
@@ -594,18 +620,34 @@
         }
 
         window.toggleMaximize = function(id) {
+            const currentCam = state.cameras.find(c => c.id === id);
+            const isNowMaximized = !currentCam.maximized;
+
             state.cameras.forEach(cam => {
+                const maxBtn = document.getElementById(`max-btn-${cam.id}`);
                 if (cam.id === id) {
-                    cam.maximized = !cam.maximized;
+                    cam.maximized = isNowMaximized;
                     if (cam.maximized) {
                         cam.tile.classList.add('maximized');
+                        if (maxBtn) {
+                            maxBtn.textContent = 'Restore';
+                            maxBtn.setAttribute('aria-label', `Restore ${cam.title}`);
+                        }
                     } else {
                         cam.tile.classList.remove('maximized');
+                        if (maxBtn) {
+                            maxBtn.textContent = 'Maximize';
+                            maxBtn.setAttribute('aria-label', `Maximize ${cam.title}`);
+                        }
                     }
                 } else {
                     cam.maximized = false;
                     cam.tile.classList.remove('maximized');
-                    cam.tile.style.display = state.cameras.find(c => c.id === id).maximized ? 'none' : 'flex';
+                    cam.tile.style.display = isNowMaximized ? 'none' : 'flex';
+                    if (maxBtn) {
+                        maxBtn.textContent = 'Maximize';
+                        maxBtn.setAttribute('aria-label', `Maximize ${cam.title}`);
+                    }
                 }
             });
             updateGridLayout();
